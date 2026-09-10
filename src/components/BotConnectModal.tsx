@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, ExternalLink, MessageSquare, Smartphone, Play, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ExternalLink, MessageSquare, Smartphone, Play, CheckCircle, Copy, Sparkles } from 'lucide-react';
 
 export type BotPlatform = 'telegram' | 'discord' | 'whatsapp' | 'google-chat';
 
@@ -13,51 +13,88 @@ interface BotConnectModalProps {
 export default function BotConnectModal({ platform, onClose }: BotConnectModalProps) {
   const [testOutput, setTestOutput] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  if (!platform) return null;
+  const details = platform
+    ? {
+        telegram: {
+          title: '✈️ Telegram Bot Connection',
+          color: '#38bdf8',
+          webhook: '/api/webhooks/telegram',
+          appScheme: 'tg://msg?text=/start',
+          launchUrl: 'https://t.me/CareerCopilotBot?start=analyze',
+          command: '/start',
+          instruction: 'Open Telegram app directly or view the live bot output below.',
+          buttonText: '🚀 Open Telegram App',
+        },
+        discord: {
+          title: '💬 Discord Bot Connection',
+          color: '#818cf8',
+          webhook: '/api/webhooks/discord',
+          appScheme: 'discord://',
+          launchUrl: 'https://discord.com/app',
+          command: '/analyze',
+          instruction: 'Open Discord app directly or view the live bot output below.',
+          buttonText: '🚀 Open Discord App',
+        },
+        whatsapp: {
+          title: '🟢 WhatsApp Bot Connection',
+          color: '#34d399',
+          webhook: '/api/webhooks/whatsapp',
+          appScheme: 'whatsapp://send?text=Analyze%20my%20resume',
+          launchUrl: 'https://api.whatsapp.com/send?text=Analyze%20my%20resume',
+          command: 'Analyze my resume',
+          instruction: 'Open WhatsApp app directly or view the live bot output below.',
+          buttonText: '🚀 Open WhatsApp App',
+        },
+        'google-chat': {
+          title: '🔷 Google Chat App Connection',
+          color: '#f472b6',
+          webhook: '/api/webhooks/google-chat',
+          appScheme: 'googlechat://',
+          launchUrl: 'https://chat.google.com/',
+          command: 'Analyze resume',
+          instruction: 'Open Google Chat app directly or view the live bot output below.',
+          buttonText: '🚀 Open Google Chat App',
+        },
+      }[platform]
+    : null;
 
-  const details = {
-    telegram: {
-      title: '✈️ Telegram Bot Connection',
-      color: '#38bdf8',
-      webhook: '/api/webhooks/telegram',
-      appScheme: 'tg://msg?text=/start',
-      launchUrl: 'https://t.me/CareerCopilotBot?start=analyze',
-      command: '/start',
-      instruction: 'If Telegram is installed on your phone, clicking below will open the Telegram app directly and send /start for instant Career Intelligence output.',
-      buttonText: '🚀 Open Telegram Mobile App',
-    },
-    discord: {
-      title: '💬 Discord Bot Connection',
-      color: '#818cf8',
-      webhook: '/api/webhooks/discord',
-      appScheme: 'discord://',
-      launchUrl: 'https://discord.com/app',
-      command: '/analyze',
-      instruction: 'If Discord is installed on your phone, clicking below will launch the Discord app directly to access Career Copilot bot.',
-      buttonText: '🚀 Open Discord Mobile App',
-    },
-    whatsapp: {
-      title: '🟢 WhatsApp Bot Connection',
-      color: '#34d399',
-      webhook: '/api/webhooks/whatsapp',
-      appScheme: 'whatsapp://send?text=Analyze%20my%20resume',
-      launchUrl: 'https://api.whatsapp.com/send?text=Analyze%20my%20resume',
-      command: 'Analyze my resume',
-      instruction: 'If WhatsApp is installed on your phone, clicking below will launch WhatsApp directly with pre-filled prompt "Analyze my resume".',
-      buttonText: '🚀 Open WhatsApp Mobile App',
-    },
-    'google-chat': {
-      title: '🔷 Google Chat App Connection',
-      color: '#f472b6',
-      webhook: '/api/webhooks/google-chat',
-      appScheme: 'googlechat://',
-      launchUrl: 'https://chat.google.com/',
-      command: 'Analyze resume',
-      instruction: 'If Google Chat is installed on your phone, clicking below will launch the Google Chat app directly to view Career Copilot.',
-      buttonText: '🚀 Open Google Chat Mobile App',
-    },
-  }[platform];
+  useEffect(() => {
+    if (!platform || !details) return;
+    let isMounted = true;
+    setIsTesting(true);
+
+    fetch(details.webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: {
+          text: details.command,
+          from: { id: 'user_session_mobile', first_name: 'Candidate' },
+        },
+      }),
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (isMounted) {
+          if (json.text) setTestOutput(json.text);
+          else setTestOutput('Bot output generated successfully.');
+        }
+      })
+      .catch(() => {
+        if (isMounted) setTestOutput('Error fetching bot output.');
+      })
+      .finally(() => {
+        if (isMounted) setIsTesting(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [platform]);
+
+  if (!platform || !details) return null;
 
   const handleLaunchMobileApp = () => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -71,30 +108,11 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
     }
   };
 
-  const handleTestWebhookOutput = async () => {
-    setIsTesting(true);
-    try {
-      const res = await fetch(details.webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: {
-            text: details.command,
-            from: { id: 'mobile_user_test', first_name: 'Mobile User' },
-          },
-        }),
-      });
-      const json = await res.json();
-      if (json.text) {
-        setTestOutput(json.text);
-      } else {
-        setTestOutput(`Webhook triggered successfully. Status: 200 OK.`);
-      }
-    } catch {
-      setTestOutput('Error triggering webhook test response.');
-    } finally {
-      setIsTesting(false);
-    }
+  const handleCopyOutput = () => {
+    if (!testOutput) return;
+    navigator.clipboard.writeText(testOutput);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -114,7 +132,7 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
       <div
         className="console-card"
         style={{
-          maxWidth: '520px',
+          maxWidth: '540px',
           width: '92%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -124,7 +142,7 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: details.color, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: details.color, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
             {details.title}
           </h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -132,63 +150,44 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
           </button>
         </div>
 
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
-          📱 <strong>Mobile App Direct Launch:</strong> {details.instruction}
+        <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
+          {details.instruction}
         </p>
 
-        <div style={{ background: 'var(--surface-elevated)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>API Webhook Endpoint:</span>
-            <button
-              onClick={() => {
-                const fullUrl = `${window.location.origin}${details.webhook}`;
-                navigator.clipboard.writeText(fullUrl);
-                alert(`Copied Webhook URL to clipboard:\n${fullUrl}`);
-              }}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--accent-primary)',
-                color: 'var(--accent-primary)',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                fontSize: '0.72rem',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              Copy Webhook URL
-            </button>
+        {/* Live Bot Output Window */}
+        <div style={{ marginBottom: '16px', background: 'var(--surface-elevated)', borderRadius: '8px', border: '1px solid var(--border)', padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles style={{ width: 14 }} /> Bot Response Output:
+            </span>
+            {testOutput && (
+              <button
+                onClick={handleCopyOutput}
+                className="btn btn-secondary"
+                style={{ padding: '3px 8px', fontSize: '0.75rem', fontWeight: 700 }}
+              >
+                {copied ? '✓ Copied Output!' : '📋 Copy Output'}
+              </button>
+            )}
           </div>
-          <code style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', display: 'block', marginBottom: '10px', wordBreak: 'break-all' }}>
-            {details.webhook}
-          </code>
 
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Trigger Command:</div>
-          <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            "{details.command}"
-          </div>
+          {isTesting ? (
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px 0' }}>
+              ⏳ Generating bot analysis output...
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', maxHeight: '220px', overflowY: 'auto', background: 'var(--bg-primary)', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', fontFamily: 'monospace' }}>
+              {testOutput}
+            </div>
+          )}
         </div>
 
-        {/* Live Webhook Output Preview */}
-        {testOutput ? (
-          <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--success)', fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', maxHeight: '180px', overflowY: 'auto' }}>
-            <div style={{ color: 'var(--success)', fontWeight: 800, marginBottom: '6px' }}>
-              ✓ Output from Bot Webhook:
-            </div>
-            {testOutput}
-          </div>
-        ) : (
-          <button
-            onClick={handleTestWebhookOutput}
-            disabled={isTesting}
-            className="btn btn-secondary"
-            style={{ width: '100%', marginBottom: '16px', fontSize: '0.82rem', fontWeight: 700 }}
-          >
-            <Play style={{ width: 14 }} /> {isTesting ? 'Generating Output...' : '⚡ Test & Preview Bot Output'}
-          </button>
-        )}
+        <div style={{ background: 'var(--surface-elevated)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--border)', marginBottom: '20px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          <div>Webhook: <code style={{ color: 'var(--accent-primary)' }}>{details.webhook}</code></div>
+          <div>Trigger Command: <strong style={{ color: 'var(--text-primary)' }}>"{details.command}"</strong></div>
+        </div>
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" onClick={onClose}>
             Close
           </button>
