@@ -1,11 +1,11 @@
-// Comprehensive TypeScript definitions for AI Resume & JD Analyzer
+// Comprehensive TypeScript definitions for AI Career Intelligence
 
 export type FileType = 'pdf' | 'docx' | 'txt' | 'text';
 
 export interface FileInput {
   name: string;
   type: FileType;
-  content: string; // Plain text content extracted
+  content: string;
   buffer?: Buffer;
   sizeBytes?: number;
 }
@@ -76,6 +76,43 @@ export interface StructuredResume {
   atsFormattingIssues: string[];
 }
 
+export type RequirementPriority = 'CRITICAL' | 'IMPORTANT' | 'USEFUL' | 'BONUS';
+
+export interface JobDnaItem {
+  name: string;
+  category: string;
+  weightPct: number;
+  priority: RequirementPriority;
+  isMandatory: boolean;
+}
+
+export interface JobDna {
+  jobTitle: string;
+  company: string;
+  experienceRequired: string;
+  educationRequired: string;
+  dnaItems: JobDnaItem[];
+  categoryBreakdown: { category: string; pct: number }[];
+}
+
+export type CapabilityStatus = 'STRONG' | 'PARTIAL' | 'NOT_DETECTED';
+
+export interface CareerTwinNode {
+  capability: string;
+  category: 'Technical Skills' | 'Projects' | 'Experience' | 'Education';
+  status: CapabilityStatus;
+  evidenceSnippet: string;
+}
+
+export interface CareerTwin {
+  alignmentPct: number;
+  technicalNodes: CareerTwinNode[];
+  projectNodes: CareerTwinNode[];
+  experienceNodes: CareerTwinNode[];
+  educationNodes: CareerTwinNode[];
+  summaryMessage: string;
+}
+
 export type MatchType = 'EXACT' | 'NORMALIZED' | 'SYNONYM' | 'SEMANTIC' | 'PARTIAL' | 'NOT_DETECTED';
 
 export interface SkillMatchResult {
@@ -83,10 +120,21 @@ export interface SkillMatchResult {
   canonicalSkill: string;
   resumeEvidence: string;
   matchType: MatchType;
-  confidence: number; // 0 to 100
+  confidence: number;
   scoreContribution: number;
   isMandatory: boolean;
   status: 'MATCHED' | 'PARTIALLY_MATCHED' | 'NOT_DETECTED';
+}
+
+export interface MissingSkillDetail {
+  skill: string;
+  isMandatory: boolean;
+  whyItMatters: string;
+  currentImportance: string;
+  suggestedPriority: string;
+  suggestedResource: string;
+  suggestedProjectIdea: string;
+  phrasingNotice: string;
 }
 
 export interface EvidenceItem {
@@ -108,23 +156,39 @@ export interface DimensionScore {
 }
 
 export interface AtsScoreBreakdown {
-  skillsMatch: DimensionScore; // max 30
-  keywordMatch: DimensionScore; // max 15
-  experienceProjectAlignment: DimensionScore; // max 15
-  educationAlignment: DimensionScore; // max 10
-  responsibilitiesAlignment: DimensionScore; // max 10
-  resumeStructure: DimensionScore; // max 10
-  atsParsingCompatibility: DimensionScore; // max 10
-  totalScore: number; // 0-100
+  skillsMatch: DimensionScore;
+  keywordMatch: DimensionScore;
+  experienceProjectAlignment: DimensionScore;
+  educationAlignment: DimensionScore;
+  responsibilitiesAlignment: DimensionScore;
+  resumeStructure: DimensionScore;
+  atsParsingCompatibility: DimensionScore;
+  totalScore: number;
 }
 
 export type AlignmentTier = 'EXCELLENT' | 'STRONG' | 'GOOD' | 'MODERATE' | 'WEAK' | 'POOR';
 
 export interface AlignmentScoreResult {
-  score: number; // 0-100
+  score: number;
   tier: AlignmentTier;
   label: string;
   explanation: string;
+}
+
+export type ReadinessTier = '🚀 Interview Ready' | '🟢 Strong Candidate' | '🟡 Almost Ready' | '🟠 Needs Improvement' | '🔴 Opportunities to Improve';
+
+export interface JobReadinessScore {
+  score: number;
+  tier: ReadinessTier;
+  label: string;
+  summaryQuote: string;
+  subScores: {
+    atsScore: number;
+    skillMatch: number;
+    experienceMatch: number;
+    projectMatch: number;
+    educationMatch: number;
+  };
 }
 
 export type DrawbackSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -139,7 +203,7 @@ export interface DrawbackItem {
 
 export interface SectionAnalysisResult {
   sectionName: string;
-  score: number; // 0-100
+  score: number;
   detected: boolean;
   problems: string[];
   missingInformation: string[];
@@ -148,7 +212,7 @@ export interface SectionAnalysisResult {
 
 export interface ProjectAnalysisResult {
   title: string;
-  relevanceScore: number; // 0-100
+  relevanceScore: number;
   technologies: string[];
   relevanceToJd: string;
   technicalComplexity: string;
@@ -160,14 +224,6 @@ export interface ProjectAnalysisResult {
   deploymentMentioned: boolean;
   hasMetrics: boolean;
   rewriteBulletSuggestions: string[];
-}
-
-export interface KeywordGapItem {
-  jdRequirement: string;
-  resumeFound: string;
-  matchType: MatchType;
-  status: 'MATCH' | 'PARTIAL' | 'MISSING';
-  recommendation: string;
 }
 
 export interface RecommendedSkillItem {
@@ -211,23 +267,123 @@ export interface ImprovementRoadmap {
   thirtyDayPlan: string[];
 }
 
+export interface SkillAdjacencyItem {
+  existingSkill: string;
+  targetMissingSkill: string;
+  relationshipNote: string;
+}
+
+export interface GapActionItem {
+  skill: string;
+  statusNotice: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  estimatedEffort: string;
+  learn: { topic: string; resource: string; url: string };
+  practice: { projectIdea: string };
+  prove: { githubTip: string };
+  update: { resumeFix: string };
+}
+
+export interface SingleNextStep {
+  title: string;
+  why: string;
+  estimatedEffort: string;
+  expectedBenefit: string;
+  actionSkill: string;
+}
+
+export interface WhatIfProjection {
+  currentReadinessScore: number;
+  availableGaps: Array<{ skill: string; pointsValue: number }>;
+  disclaimer: string;
+}
+
+export interface TenSecondScan {
+  visibleIn10Seconds: string[];
+  notImmediatelyObvious: string[];
+}
+
+export interface RecruiterLens {
+  firstImpression: string;
+  strongestSignal: string;
+  weakestSignal: string;
+  missingSignal: string;
+  recruiterRecommendation: string;
+  tenSecondScan: TenSecondScan;
+}
+
+export interface ResumeHealth {
+  atsParsingPct: number;
+  keywordCoveragePct: number;
+  sectionCompletenessPct: number;
+  readabilityPct: number;
+  evidenceQualityPct: number;
+  biggestOpportunity: string;
+  rawParsedSections: Array<{ heading: string; textSnippet: string; status: 'Healthy' | 'Needs Attention' }>;
+}
+
+export type DnaClusterCategory =
+  | 'TECH STACK'
+  | 'EXPERIENCE'
+  | 'RESPONSIBILITIES'
+  | 'EDUCATION'
+  | 'TOOLS'
+  | 'SOFT SKILLS'
+  | 'DOMAIN'
+  | 'CERTIFICATIONS';
+
+export interface JobDnaMapNode {
+  id: string;
+  name: string;
+  cluster: DnaClusterCategory;
+  importance: RequirementPriority;
+  matchStatus: 'EXACT MATCH' | 'SEMANTIC MATCH' | 'PARTIAL EVIDENCE' | 'NOT DETECTED';
+  confidence: number;
+  scoreContribution: number;
+  resumeEvidence: string;
+  recommendedAction?: string;
+  x?: number;
+  y?: number;
+}
+
 export interface InterviewQuestionItem {
-  category: 'Technical' | 'Project' | 'Resume' | 'HR' | 'Behavioral' | 'Coding' | 'Scenario';
+  id: string;
+  category: 'Technical' | 'Project' | 'Coding' | 'System Design' | 'Behavioral' | 'HR' | 'Scenario';
   question: string;
   whyAsked: string;
   suggestedFocus: string;
   isHighLikelihood?: boolean;
 }
 
-export interface MissingSkillDetail {
-  skill: string;
-  isMandatory: boolean;
-  whyItMatters: string;
-  currentImportance: string;
-  suggestedPriority: string;
-  suggestedResource: string;
-  suggestedProjectIdea: string;
-  phrasingNotice: string;
+export type InterviewerMode =
+  | 'Technical Interview'
+  | 'Project Interview'
+  | 'Resume Deep Dive'
+  | 'HR Interview'
+  | 'Behavioral Interview'
+  | 'System Design'
+  | 'Coding Interview';
+
+export type InterviewDifficulty = 'Beginner' | 'Intermediate' | 'Advanced';
+
+export interface MockAnswerEvaluation {
+  overallScorePct: number;
+  questionRelevancePct: number;
+  technicalAccuracyPct: number;
+  conceptCoveragePct: number;
+  depthPct: number;
+  clarityPct: number;
+  practicalEvidencePct: number;
+  isRelevant: boolean;
+  relevanceStatus: string;
+  answerQualityTier: '🟢 Strong' | '🟡 Partial' | '🔴 Weak';
+  whatYouDidWell: string;
+  demonstratedConcepts: string[];
+  partiallyDemonstratedConcepts: string[];
+  missingConcepts: string[];
+  suggestedImprovement: string;
+  resumeClaimWarning?: string;
+  followUpQuestion?: string;
 }
 
 export interface FullAnalysisResult {
@@ -237,35 +393,50 @@ export interface FullAnalysisResult {
   resumeFilename: string;
   jobTitle: string;
   company: string;
+  
+  // Signature Features
+  jobDna: JobDna;
+  careerTwin: CareerTwin;
+  readinessScore: JobReadinessScore;
   atsScore: AtsScoreBreakdown;
   alignmentScore: AlignmentScoreResult;
   matchedSkills: SkillMatchResult[];
   partiallyMatchedSkills: SkillMatchResult[];
   missingSkills: MissingSkillDetail[];
-  keywordGaps: KeywordGapItem[];
-  drawbacks: DrawbackItem[];
+  rawEvidence: EvidenceItem[];
+  whyNot100: Array<{ deduction: number; reason: string; category: string }>;
+  gapActions: GapActionItem[];
+  skillAdjacencies: SkillAdjacencyItem[];
+  nextStep: SingleNextStep;
+  whatIf: WhatIfProjection;
+  recruiterLens: RecruiterLens;
+  resumeHealth: ResumeHealth;
+  
+  // Section & Project Audits
   sectionAnalysis: SectionAnalysisResult[];
   projectAnalysis: ProjectAnalysisResult[];
+
+  // Roadmap & Prep
   recommendedSkills: RecommendedSkillItem[];
   courseRecommendations: CourseRecommendation[];
   projectRecommendations: ProjectRecommendation[];
   roadmap: ImprovementRoadmap;
   interviewQuestions: InterviewQuestionItem[];
   mostLikelyQuestions: InterviewQuestionItem[];
-  rawEvidence: EvidenceItem[];
+  drawbacks: DrawbackItem[];
   usedLlmProvider: boolean;
 }
 
 export interface ResumeComparisonRow {
   candidateName: string;
   filename: string;
+  readinessScore: number;
   atsScore: number;
-  alignmentScore: number;
   matchedSkillsCount: number;
   missingSkillsCount: number;
-  projectScore: number;
-  overallTier: AlignmentTier;
+  overallTier: ReadinessTier;
   analysisId: string;
+  whyStrongestReason?: string;
 }
 
 export interface MultiResumeAnalysisReport {
@@ -274,4 +445,5 @@ export interface MultiResumeAnalysisReport {
   totalResumesAnalyzed: number;
   comparisonTable: ResumeComparisonRow[];
   individualAnalyses: FullAnalysisResult[];
+  whyTopCandidateIsStrongest: string;
 }
