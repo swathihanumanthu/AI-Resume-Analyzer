@@ -294,7 +294,12 @@ export default function CareerIntelligencePage() {
         {activeInputTab === 'upload' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '8px' }}>Target Job Description (JD)</label>
+              <label style={{ display: 'block', fontWeight: 700, marginBottom: '4px' }}>
+                Target Job Description <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>(Single File Only)</span>
+              </label>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                📌 Upload exactly 1 Job Description file (.pdf, .docx, .txt)
+              </div>
               <input
                 type="file"
                 accept=".pdf,.docx,.txt"
@@ -318,9 +323,12 @@ export default function CareerIntelligencePage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '8px' }}>
-                Candidate Resumes (Single or Multiple)
+              <label style={{ display: 'block', fontWeight: 700, marginBottom: '4px' }}>
+                Candidate Resumes <span style={{ fontSize: '0.78rem', color: 'var(--success)', fontWeight: 600 }}>(Multiple Files Allowed)</span>
               </label>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                📁 Upload 1 or multiple candidate resume files simultaneously
+              </div>
               <input
                 type="file"
                 multiple
