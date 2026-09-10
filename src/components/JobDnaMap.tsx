@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { JobDna, JobDnaItem, EvidenceItem, JobDnaMapNode, DnaClusterCategory } from '../types/analyzer';
-import { CheckCircle, AlertTriangle, XCircle, Info } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Info } from 'lucide-react';
 
 interface JobDnaMapProps {
   jobDna: JobDna;
@@ -10,9 +10,26 @@ interface JobDnaMapProps {
   jobTitle: string;
 }
 
+interface PositionedNode extends JobDnaMapNode {
+  x: number;
+  y: number;
+  ring: number;
+  angleDeg: number;
+  labelAnchor: 'start' | 'middle' | 'end';
+  labelDx: number;
+  labelDy: number;
+}
+
 export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapProps) {
   const [selectedNode, setSelectedNode] = useState<JobDnaMapNode | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [activeClusterFilter, setActiveClusterFilter] = useState<string>('ALL');
+
+  // Zoom & Pan state
+  const [zoom, setZoom] = useState<number>(1);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Convert JobDna items into structured map nodes
   const mapNodes: JobDnaMapNode[] = jobDna.dnaItems.map((item, idx) => {
@@ -58,30 +75,102 @@ export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapPr
 
   const clusters: DnaClusterCategory[] = ['TECH STACK', 'EXPERIENCE', 'RESPONSIBILITIES', 'EDUCATION', 'TOOLS', 'SOFT SKILLS', 'DOMAIN', 'CERTIFICATIONS'];
 
-  // SVG Radial Layout Calculations
-  const width = 760;
-  const height = 480;
+  // Filter nodes
+  const visibleNodes = activeClusterFilter === 'ALL'
+    ? mapNodes
+    : mapNodes.filter((n) => n.cluster === activeClusterFilter);
+
+  // SVG Canvas Dimensions
+  const width = 960;
+  const height = 620;
   const centerX = width / 2;
   const centerY = height / 2;
-  const radius = 170;
 
-  // Position nodes radially around the center
-  const positionedNodes = mapNodes.map((node, index) => {
-    const clusterIdx = clusters.indexOf(node.cluster);
-    const clusterAngle = (clusterIdx / clusters.length) * 2 * Math.PI - Math.PI / 2;
-    const offsetInCluster = (index % 3) * 0.25 - 0.25;
-    const angle = clusterAngle + offsetInCluster;
+  // Multi-Ring Layout Constants
+  const radiusInner = 175;
+  const radiusOuter = 275;
 
-    const rOffset = radius + (index % 2 === 0 ? 25 : -20);
-    const x = Math.round(centerX + rOffset * Math.cos(angle));
-    const y = Math.round(centerY + rOffset * Math.sin(angle));
+  // Calculate clean, non-overlapping deterministic positions
+  const N = visibleNodes.length;
 
-    return { ...node, x, y };
+  // Sort nodes deterministically so related categories sit near each other
+  const sortedNodes = [...visibleNodes].sort((a, b) => {
+    if (a.cluster !== b.cluster) return a.cluster.localeCompare(b.cluster);
+    return a.importance.localeCompare(b.importance);
   });
 
-  const filteredNodes = activeClusterFilter === 'ALL'
-    ? positionedNodes
-    : positionedNodes.filter((n) => n.cluster === activeClusterFilter);
+  const positionedNodes: PositionedNode[] = sortedNodes.map((node, index) => {
+    // Distribute angles evenly around 360 degrees
+    const baseAngleRad = (index / Math.max(1, N)) * 2 * Math.PI - Math.PI / 2;
+    // Alternate between Inner and Outer Orbit to maximize separation
+    const ring = N > 6 ? (index % 2 === 0 ? radiusInner : radiusOuter) : radiusInner;
+
+    const x = Math.round(centerX + ring * Math.cos(baseAngleRad));
+    const y = Math.round(centerY + ring * Math.sin(baseAngleRad));
+
+    // Calculate angle in degrees [0, 360)
+    let angleDeg = (baseAngleRad * 180) / Math.PI;
+    if (angleDeg < 0) angleDeg += 360;
+
+    // Smart Label Position based on quadrant angle from center
+    let labelAnchor: 'start' | 'middle' | 'end' = 'middle';
+    let labelDx = 0;
+    let labelDy = 0;
+
+    if (angleDeg >= 315 || angleDeg < 45) {
+      // Right side
+      labelAnchor = 'start';
+      labelDx = 22;
+      labelDy = 4;
+    } else if (angleDeg >= 45 && angleDeg < 135) {
+      // Bottom
+      labelAnchor = 'middle';
+      labelDx = 0;
+      labelDy = 26;
+    } else if (angleDeg >= 135 && angleDeg < 225) {
+      // Left side
+      labelAnchor = 'end';
+      labelDx = -22;
+      labelDy = 4;
+    } else {
+      // Top
+      labelAnchor = 'middle';
+      labelDx = 0;
+      labelDy = -18;
+    }
+
+    return {
+      ...node,
+      x,
+      y,
+      ring,
+      angleDeg,
+      labelAnchor,
+      labelDx,
+      labelDy,
+    };
+  });
+
+  // Zoom & Pan Handlers
+  const handleZoomIn = () => setZoom((prev) => Math.min(2.0, prev + 0.2));
+  const handleZoomOut = () => setZoom((prev) => Math.max(0.6, prev - 0.2));
+  const handleResetView = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
 
   const getStatusColor = (status: JobDnaMapNode['matchStatus']) => {
     switch (status) {
@@ -108,21 +197,22 @@ export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapPr
 
   return (
     <div className="console-card">
+      {/* Header & Cluster Filter Buttons */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
             🧬 JOB DNA MAP — Constellation View
           </h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Interactive requirement constellation mapped from target Job Description. Click any node to inspect evidence.
+            Balanced 360° constellation map mapped from target Job Description. Click any node to inspect evidence.
           </p>
         </div>
 
-        {/* Cluster Filter Tabs */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {/* Cluster Filter Buttons */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             className={`prompt-chip ${activeClusterFilter === 'ALL' ? 'active' : ''}`}
-            onClick={() => setActiveClusterFilter('ALL')}
+            onClick={() => { setActiveClusterFilter('ALL'); handleResetView(); }}
             style={{ fontWeight: activeClusterFilter === 'ALL' ? 700 : 500 }}
           >
             All Clusters ({mapNodes.length})
@@ -134,7 +224,7 @@ export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapPr
               <button
                 key={c}
                 className="prompt-chip"
-                onClick={() => setActiveClusterFilter(c)}
+                onClick={() => { setActiveClusterFilter(c); handleResetView(); }}
                 style={{ fontWeight: activeClusterFilter === c ? 700 : 500, borderColor: activeClusterFilter === c ? 'var(--accent-primary)' : undefined }}
               >
                 {c} ({count})
@@ -144,82 +234,161 @@ export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapPr
         </div>
       </div>
 
-      {/* SVG Radial Graph Container */}
-      <div style={{ position: 'relative', width: '100%', overflowX: 'auto', background: 'var(--surface-card)', borderRadius: 'var(--radius-md)', padding: '16px', border: '1px solid var(--border)' }}>
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', minWidth: '600px', height: 'auto', maxHeight: '500px' }}>
+      {/* Main SVG Graph Container */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          background: 'var(--surface-card)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px',
+          border: '1px solid var(--border)',
+          overflow: 'hidden',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {/* Zoom Controls Overlay */}
+        <div style={{ position: 'absolute', top: '16px', left: '16px', display: 'flex', gap: '6px', zIndex: 10 }}>
+          <button
+            onClick={handleZoomIn}
+            className="btn btn-secondary"
+            style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+            title="Zoom In"
+          >
+            <ZoomIn style={{ width: 14, height: 14 }} />
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className="btn btn-secondary"
+            style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+            title="Zoom Out"
+          >
+            <ZoomOut style={{ width: 14, height: 14 }} />
+          </button>
+          <button
+            onClick={handleResetView}
+            className="btn btn-secondary"
+            style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+            title="Reset View"
+          >
+            <RotateCcw style={{ width: 14, height: 14 }} /> Reset
+          </button>
+        </div>
+
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ width: '100%', height: 'auto', minHeight: '480px', maxHeight: '620px', display: 'block' }}
+        >
           <defs>
-            <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+            <radialGradient id="targetRoleGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.45" />
               <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
             </radialGradient>
           </defs>
 
-          {/* Background Orbit Ring */}
-          <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="var(--border)" strokeWidth="1.5" strokeDasharray="6 6" />
+          {/* Transform group for Zoom and Pan */}
+          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`} style={{ transformOrigin: 'center' }}>
+            {/* Concentric Dashed Orbits */}
+            <circle cx={centerX} cy={centerY} r={radiusInner} fill="none" stroke="var(--border)" strokeWidth="1.5" strokeDasharray="5 5" opacity="0.6" />
+            {N > 6 && (
+              <circle cx={centerX} cy={centerY} r={radiusOuter} fill="none" stroke="var(--border)" strokeWidth="1.5" strokeDasharray="6 6" opacity="0.4" />
+            )}
 
-          {/* Connecting Lines from Center to Nodes */}
-          {filteredNodes.map((node) => (
-            <line
-              key={`line-${node.id}`}
-              x1={centerX}
-              y1={centerY}
-              x2={node.x}
-              y2={node.y}
-              stroke={getStatusColor(node.matchStatus)}
-              strokeWidth={selectedNode?.id === node.id ? '2.5' : '1'}
-              strokeOpacity={selectedNode?.id === node.id ? '0.9' : '0.4'}
-            />
-          ))}
+            {/* Subtle Curved Connecting Lines */}
+            {positionedNodes.map((node) => {
+              const isSelected = selectedNode?.id === node.id;
+              const isHovered = hoveredNodeId === node.id;
+              const color = getStatusColor(node.matchStatus);
 
-          {/* Center Target Role Node */}
-          <circle cx={centerX} cy={centerY} r="48" fill="url(#centerGlow)" />
-          <circle cx={centerX} cy={centerY} r="38" fill="var(--bg-secondary)" stroke="var(--accent-primary)" strokeWidth="2.5" />
-          <text x={centerX} y={centerY - 4} textAnchor="middle" fill="var(--text-primary)" fontSize="11" fontWeight="800">
-            TARGET ROLE
-          </text>
-          <text x={centerX} y={centerY + 12} textAnchor="middle" fill="var(--text-secondary)" fontSize="9" fontWeight="600">
-            {jobTitle.length > 18 ? jobTitle.substring(0, 16) + '...' : jobTitle}
-          </text>
-
-          {/* Requirement Constellation Nodes */}
-          {filteredNodes.map((node) => {
-            const isSelected = selectedNode?.id === node.id;
-            const nodeColor = getStatusColor(node.matchStatus);
-
-            return (
-              <g
-                key={node.id}
-                transform={`translate(${node.x}, ${node.y})`}
-                onClick={() => setSelectedNode(node)}
-                style={{ cursor: 'pointer' }}
-              >
-                {/* Node Ring */}
-                <circle
-                  r={isSelected ? '18' : '14'}
-                  fill="var(--bg-secondary)"
-                  stroke={nodeColor}
-                  strokeWidth={isSelected ? '3' : '2'}
+              return (
+                <line
+                  key={`line-${node.id}`}
+                  x1={centerX}
+                  y1={centerY}
+                  x2={node.x}
+                  y2={node.y}
+                  stroke={color}
+                  strokeWidth={isSelected || isHovered ? '2.5' : '1.2'}
+                  strokeOpacity={isSelected || isHovered ? '0.9' : '0.35'}
                 />
-                {/* Status Dot */}
-                <circle r="4" fill={nodeColor} />
+              );
+            })}
 
-                {/* Requirement Label */}
-                <text
-                  y="26"
-                  textAnchor="middle"
-                  fill="var(--text-primary)"
-                  fontSize="10"
-                  fontWeight={isSelected ? '800' : '600'}
-                  style={{ pointerEvents: 'none' }}
+            {/* Central TARGET ROLE Node */}
+            <circle cx={centerX} cy={centerY} r="54" fill="url(#targetRoleGlow)" />
+            <circle cx={centerX} cy={centerY} r="42" fill="var(--bg-secondary)" stroke="var(--accent-primary)" strokeWidth="3" />
+            <text x={centerX} y={centerY - 4} textAnchor="middle" fill="var(--text-primary)" fontSize="11" fontWeight="800">
+              TARGET ROLE
+            </text>
+            <text x={centerX} y={centerY + 12} textAnchor="middle" fill="var(--accent-primary)" fontSize="9" fontWeight="700">
+              {jobTitle.length > 18 ? jobTitle.substring(0, 16) + '...' : jobTitle}
+            </text>
+
+            {/* Requirement Nodes & Smart Labels */}
+            {positionedNodes.map((node) => {
+              const isSelected = selectedNode?.id === node.id;
+              const isHovered = hoveredNodeId === node.id;
+              const color = getStatusColor(node.matchStatus);
+
+              // 2-line label split if long
+              const nameParts = splitNodeName(node.name);
+
+              return (
+                <g
+                  key={node.id}
+                  transform={`translate(${node.x}, ${node.y})`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedNode(node);
+                  }}
+                  onMouseEnter={() => setHoveredNodeId(node.id)}
+                  onMouseLeave={() => setHoveredNodeId(null)}
+                  style={{ cursor: 'pointer' }}
                 >
-                  {node.name.length > 14 ? node.name.substring(0, 12) + '..' : node.name}
-                </text>
-              </g>
-            );
-          })}
+                  {/* Outer Glow Halo on Hover / Select */}
+                  {(isSelected || isHovered) && (
+                    <circle r="22" fill={color} fillOpacity="0.25" />
+                  )}
+
+                  {/* Main Node Circle */}
+                  <circle
+                    r={isSelected || isHovered ? '16' : '13'}
+                    fill="var(--bg-secondary)"
+                    stroke={color}
+                    strokeWidth={isSelected || isHovered ? '3' : '2'}
+                  />
+                  {/* Inner Status Indicator Dot */}
+                  <circle r="4" fill={color} />
+
+                  {/* Smart Directional Label */}
+                  <text
+                    x={node.labelDx}
+                    y={node.labelDy}
+                    textAnchor={node.labelAnchor}
+                    fill="var(--text-primary)"
+                    fontSize={isSelected || isHovered ? '11' : '10'}
+                    fontWeight={isSelected || isHovered ? '800' : '600'}
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {nameParts[0]}
+                    {nameParts.length > 1 && (
+                      <tspan x={node.labelDx} dy="12" textAnchor={node.labelAnchor}>
+                        {nameParts[1]}
+                      </tspan>
+                    )}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
         </svg>
 
-        {/* Node Details Inspection Drawer / Modal overlay */}
+        {/* Selected Node Details Inspection Overlay */}
         {selectedNode && (
           <div
             style={{
@@ -232,7 +401,7 @@ export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapPr
               borderRadius: 'var(--radius-md)',
               padding: '16px',
               boxShadow: 'var(--shadow-glow)',
-              zIndex: 10,
+              zIndex: 20,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -281,7 +450,7 @@ export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapPr
         )}
       </div>
 
-      {/* JOB DNA LEGEND */}
+      {/* JOB DNA MAP LEGEND */}
       <div style={{ marginTop: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
         <strong>Legend:</strong>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -299,6 +468,17 @@ export default function JobDnaMap({ jobDna, rawEvidence, jobTitle }: JobDnaMapPr
       </div>
     </div>
   );
+}
+
+function splitNodeName(name: string): string[] {
+  if (name.length <= 15) return [name];
+  const words = name.split(/\s+/);
+  if (words.length === 1) return [name.substring(0, 14) + '..'];
+
+  const mid = Math.ceil(words.length / 2);
+  const line1 = words.slice(0, mid).join(' ');
+  const line2 = words.slice(mid).join(' ');
+  return [line1, line2];
 }
 
 function getCategoryCluster(category: string, name: string): DnaClusterCategory {
