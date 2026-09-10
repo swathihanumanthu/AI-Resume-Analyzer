@@ -13,10 +13,10 @@
     "@google/generative-ai": "^0.24.0",
     "lucide-react": "^0.475.0",
     "mammoth": "^1.9.0",
-    "next": "latest",
+    "next": "^15.1.0",
     "pdf-parse": "^1.1.1",
-    "react": "latest",
-    "react-dom": "latest"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -24,7 +24,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "latest",
+    "eslint-config-next": "^15.1.0",
     "typescript": "^5",
     "vitest": "^3.2.7"
   }
