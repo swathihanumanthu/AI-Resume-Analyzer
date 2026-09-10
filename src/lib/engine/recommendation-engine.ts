@@ -168,7 +168,7 @@ export function generateCourseRecommendations(
   });
 
   // 2. If fewer than 3 courses, fill with core mandatory JD skills
-  const fallbackSkills = [...(jd.mustHaveSkills || []), ...(jd.niceToHaveSkills || [])];
+  const fallbackSkills = [...(jd.mustHaveSkills || []), ...(jd.preferredSkills || [])];
   for (const skill of fallbackSkills) {
     if (recommendations.length >= 3) break;
     if (processedSkills.has(skill)) continue;
