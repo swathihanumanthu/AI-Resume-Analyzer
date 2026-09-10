@@ -388,6 +388,7 @@ export interface MockAnswerEvaluation {
 
 export interface FullAnalysisResult {
   id: string;
+  candidateId: string;
   timestamp: string;
   candidateName: string;
   resumeFilename: string;
@@ -428,12 +429,16 @@ export interface FullAnalysisResult {
 }
 
 export interface ResumeComparisonRow {
+  candidateId: string;
   candidateName: string;
   filename: string;
   readinessScore: number;
   atsScore: number;
+  alignmentScore: number;
   matchedSkillsCount: number;
   missingSkillsCount: number;
+  skillsMatchPct: number;
+  projectRelevanceScore: number;
   overallTier: ReadinessTier;
   analysisId: string;
   whyStrongestReason?: string;
@@ -445,5 +450,6 @@ export interface MultiResumeAnalysisReport {
   totalResumesAnalyzed: number;
   comparisonTable: ResumeComparisonRow[];
   individualAnalyses: FullAnalysisResult[];
+  failedFiles?: Array<{ fileName: string; reason: string }>;
   whyTopCandidateIsStrongest: string;
 }

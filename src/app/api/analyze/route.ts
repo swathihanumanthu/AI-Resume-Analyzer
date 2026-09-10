@@ -32,6 +32,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      if (resumes.length > 10) {
+        return NextResponse.json(
+          { success: false, error: 'Maximum 10 resumes allowed.' },
+          { status: 400 }
+        );
+      }
+
       if (resumes.length === 1) {
         const analysis = analyzeSingleResume(jdText, resumes[0].content, resumes[0].filename || 'Resume.txt');
         return NextResponse.json({ success: true, mode: 'single', data: analysis });
@@ -96,44 +103,74 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const extractedResumes: Array<{ content: string; filename: string }> = [];
-
-      for (const rFile of resumeFiles) {
-        const val = validateFile(rFile.name, undefined, rFile.size);
-        if (!val.isValid) {
-          return NextResponse.json({ success: false, error: `File '${rFile.name}': ${val.error}` }, { status: 400 });
-        }
-
-        const arrayBuf = await rFile.arrayBuffer();
-        const buffer = Buffer.from(arrayBuf);
-        const ext = rFile.name.split('.').pop()?.toLowerCase();
-        let rText = '';
-
-        if (ext === 'pdf') {
-          const pdfRes = await parsePdfBuffer(buffer);
-          if (pdfRes.isScannedOrUnreadable) {
-            return NextResponse.json(
-              { success: false, error: `File '${rFile.name}': ${pdfRes.error}` },
-              { status: 400 }
-            );
-          }
-          rText = pdfRes.text;
-        } else if (ext === 'docx') {
-          const docxRes = await parseDocxBuffer(buffer);
-          if (docxRes.error) return NextResponse.json({ success: false, error: docxRes.error }, { status: 400 });
-          rText = docxRes.text;
-        } else {
-          rText = cleanText(buffer.toString('utf-8'));
-        }
-
-        extractedResumes.push({ content: rText, filename: rFile.name });
+      if (resumeFiles.length > 10) {
+        return NextResponse.json(
+          { success: false, error: 'Maximum 10 resumes allowed.' },
+          { status: 400 }
+        );
       }
 
-      if (extractedResumes.length === 1) {
+      const extractedResumes: Array<{ content: string; filename: string }> = [];
+      const failedFiles: Array<{ fileName: string; reason: string }> = [];
+
+      for (const rFile of resumeFiles) {
+        try {
+          const val = validateFile(rFile.name, undefined, rFile.size);
+          if (!val.isValid) {
+            failedFiles.push({ fileName: rFile.name, reason: val.error || 'Invalid file format or size' });
+            continue;
+          }
+
+          const arrayBuf = await rFile.arrayBuffer();
+          const buffer = Buffer.from(arrayBuf);
+          const ext = rFile.name.split('.').pop()?.toLowerCase();
+          let rText = '';
+
+          if (ext === 'pdf') {
+            const pdfRes = await parsePdfBuffer(buffer);
+            if (pdfRes.isScannedOrUnreadable || !pdfRes.text.trim()) {
+              failedFiles.push({ fileName: rFile.name, reason: pdfRes.error || 'Unable to extract readable text from this PDF.' });
+              continue;
+            }
+            rText = pdfRes.text;
+          } else if (ext === 'docx') {
+            const docxRes = await parseDocxBuffer(buffer);
+            if (docxRes.error || !docxRes.text.trim()) {
+              failedFiles.push({ fileName: rFile.name, reason: docxRes.error || 'Unable to extract readable text from this DOCX.' });
+              continue;
+            }
+            rText = docxRes.text;
+          } else {
+            rText = cleanText(buffer.toString('utf-8'));
+            if (!rText.trim()) {
+              failedFiles.push({ fileName: rFile.name, reason: 'File content is empty.' });
+              continue;
+            }
+          }
+
+          extractedResumes.push({ content: rText, filename: rFile.name });
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : 'Corrupted file or parsing error.';
+          failedFiles.push({ fileName: rFile.name, reason });
+        }
+      }
+
+      if (extractedResumes.length === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'None of the uploaded resumes could be parsed successfully.',
+            failedFiles,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (extractedResumes.length === 1 && failedFiles.length === 0) {
         const analysis = analyzeSingleResume(extractedJdText, extractedResumes[0].content, extractedResumes[0].filename);
         return NextResponse.json({ success: true, mode: 'single', data: analysis });
       } else {
-        const report = analyzeMultipleResumes(extractedJdText, extractedResumes);
+        const report = analyzeMultipleResumes(extractedJdText, extractedResumes, failedFiles);
         return NextResponse.json({ success: true, mode: 'multiple', data: report });
       }
     }

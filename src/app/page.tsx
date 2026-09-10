@@ -43,6 +43,16 @@ export default function CareerIntelligencePage() {
   const [multiReport, setMultiReport] = useState<MultiResumeAnalysisReport | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
 
+  // Multi-Resume & Drag-and-Drop State
+  const [isDragging, setIsDragging] = useState(false);
+  const [sortBy, setSortBy] = useState<'readinessScore' | 'atsScore' | 'alignmentScore' | 'skillsMatchPct' | 'projectRelevanceScore'>('readinessScore');
+  const [processingProgress, setProcessingProgress] = useState<{
+    total: number;
+    current: number;
+    message: string;
+    steps: Array<{ label: string; status: 'completed' | 'active' | 'pending' }>;
+  }>({ total: 0, current: 0, message: '', steps: [] });
+
   // UI Journey & Drawer States
   const [activeJourneyStep, setActiveJourneyStep] = useState<'understand' | 'diagnose' | 'improve' | 'simulate' | 'prepare'>('understand');
   const [showWhyNot100, setShowWhyNot100] = useState(false);
@@ -85,6 +95,69 @@ export default function CareerIntelligencePage() {
 
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
+  // Cumulative Resume Addition Handler with Deduplication (name + size + lastModified)
+  const handleAddResumeFiles = (incoming: File[]) => {
+    setErrorMsg('');
+    const allowedExts = ['pdf', 'docx', 'txt'];
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    const MAX_RESUMES = 10;
+
+    const valid: File[] = [];
+    const rejected: string[] = [];
+
+    for (const f of incoming) {
+      const ext = f.name.split('.').pop()?.toLowerCase() || '';
+      if (!allowedExts.includes(ext)) {
+        rejected.push(`File '${f.name}': Unsupported format (.${ext}). Allowed: .pdf, .docx, .txt.`);
+        continue;
+      }
+      if (f.size > MAX_SIZE_BYTES) {
+        rejected.push(`File '${f.name}': Exceeds 10 MB limit (${(f.size / (1024 * 1024)).toFixed(1)} MB).`);
+        continue;
+      }
+      valid.push(f);
+    }
+
+    if (rejected.length > 0) {
+      setErrorMsg(`⚠️ ${rejected.join(' ')}`);
+    }
+
+    setResumeFiles((prev) => {
+      const existingKeys = new Set(prev.map((f) => `${f.name}-${f.size}-${f.lastModified}`));
+      const uniqueNew = valid.filter((f) => !existingKeys.has(`${f.name}-${f.size}-${f.lastModified}`));
+      const combined = [...prev, ...uniqueNew];
+
+      if (combined.length > MAX_RESUMES) {
+        setErrorMsg(`⚠️ Maximum ${MAX_RESUMES} resumes allowed per session. Retained first ${MAX_RESUMES} files.`);
+        return combined.slice(0, MAX_RESUMES);
+      }
+      return combined;
+    });
+  };
+
+  // Drag and Drop Event Handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) {
+      handleAddResumeFiles(files);
+    }
+  };
+
   // Guided Product Tour Loader (Sample Analysis Data)
   const handleStartProductTour = async () => {
     setIsLoading(true);
@@ -120,6 +193,18 @@ export default function CareerIntelligencePage() {
     setSingleAnalysis(null);
     setMultiReport(null);
 
+    const totalCount = resumeFiles.length || 1;
+    const initialSteps = [
+      { label: 'JD analyzed', status: 'active' as const },
+      ...resumeFiles.map((f, i) => ({ label: `Resume ${i + 1} (${f.name})`, status: 'pending' as const })),
+    ];
+    setProcessingProgress({
+      total: totalCount,
+      current: 1,
+      message: `Analyzing ${totalCount} resume${totalCount > 1 ? 's' : ''}...`,
+      steps: initialSteps,
+    });
+
     try {
       if (activeInputTab === 'upload') {
         // If no files/text selected, load sample data automatically for 1-click convenience
@@ -138,29 +223,27 @@ export default function CareerIntelligencePage() {
             setSelectedCandidateId(json.data.individualAnalyses[0].id);
           }
           setActiveJourneyStep('understand');
-          return;
-        }
-
-        if (!jdFile && !jdText && resumeFiles.length === 0) {
-          const res = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isDemo: true }),
-          });
-          const json = await res.json();
-          if (!json.success) throw new Error(json.error || 'Sample data load failed');
-
-          setMultiReport(json.data);
-          if (json.data.individualAnalyses.length > 0) {
-            setSingleAnalysis(json.data.individualAnalyses[0]);
-            setSelectedCandidateId(json.data.individualAnalyses[0].id);
-          }
-          setActiveJourneyStep('understand');
+          setProcessingProgress((prev) => ({ ...prev, message: '3 resumes analyzed successfully' }));
           return;
         }
 
         if (!jdFile && !jdText) throw new Error('Please select or paste a Job Description.');
         if (resumeFiles.length === 0) throw new Error('Please select at least one Candidate Resume file.');
+        if (resumeFiles.length > 10) throw new Error('Maximum 10 resumes allowed.');
+
+        // Simulate step progression visually during request
+        setProcessingProgress({
+          total: resumeFiles.length,
+          current: 1,
+          message: `Analyzing ${resumeFiles.length} resumes...`,
+          steps: [
+            { label: 'JD analyzed', status: 'completed' },
+            ...resumeFiles.map((f, idx) => ({
+              label: `Resume ${idx + 1} (${f.name})`,
+              status: idx === 0 ? ('active' as const) : ('pending' as const),
+            })),
+          ],
+        });
 
         const formData = new FormData();
         if (jdFile) formData.append('jdFile', jdFile);
@@ -173,12 +256,27 @@ export default function CareerIntelligencePage() {
 
         if (json.mode === 'single') {
           setSingleAnalysis(json.data);
+          setProcessingProgress({
+            total: 1,
+            current: 1,
+            message: '1 resume analyzed successfully',
+            steps: [{ label: 'Resume 1 analyzed', status: 'completed' }],
+          });
         } else {
           setMultiReport(json.data);
           if (json.data.individualAnalyses.length > 0) {
             setSingleAnalysis(json.data.individualAnalyses[0]);
             setSelectedCandidateId(json.data.individualAnalyses[0].id);
           }
+          setProcessingProgress({
+            total: json.data.totalResumesAnalyzed,
+            current: json.data.totalResumesAnalyzed,
+            message: `${json.data.totalResumesAnalyzed} resumes analyzed successfully`,
+            steps: json.data.individualAnalyses.map((a: FullAnalysisResult, i: number) => ({
+              label: `Resume ${i + 1} (${a.resumeFilename}) analyzed`,
+              status: 'completed',
+            })),
+          });
         }
       } else {
         if (!jdText && !pastedResumeText) {
@@ -349,13 +447,14 @@ export default function CareerIntelligencePage() {
         </div>
 
         {activeInputTab === 'upload' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+            {/* 1. Job Description Upload Panel */}
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '4px' }}>
-                Target Job Description <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>(Single File Only)</span>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '1rem', marginBottom: '4px' }}>
+                Upload Job Description <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>(Single File Only)</span>
               </label>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                📌 Upload exactly 1 Job Description file (.pdf, .docx, .txt)
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                📌 Upload exactly 1 target Job Description (.pdf, .docx, .txt)
               </div>
               <input
                 type="file"
@@ -380,8 +479,8 @@ export default function CareerIntelligencePage() {
                 }}
               />
               {jdFile && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'var(--surface-elevated)', borderRadius: '6px', border: '1px solid var(--accent-primary)' }}>
-                  <span>🔒 <strong>Single JD Locked:</strong> {jdFile.name} (File button disabled)</span>
+                <div style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--surface-elevated)', borderRadius: '6px', border: '1px solid var(--accent-primary)' }}>
+                  <span>🔒 <strong>Single JD Locked:</strong> {jdFile.name}</span>
                   <button
                     type="button"
                     onClick={() => setJdFile(null)}
@@ -407,25 +506,77 @@ export default function CareerIntelligencePage() {
               />
             </div>
 
+            {/* 2. Candidate Resumes Multi-Upload & Drag-and-Drop Zone */}
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '4px' }}>
-                Candidate Resumes <span style={{ fontSize: '0.78rem', color: 'var(--success)', fontWeight: 600 }}>(Multiple Files Allowed)</span>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '1rem', marginBottom: '4px' }}>
+                Upload Resumes <span style={{ fontSize: '0.78rem', color: 'var(--success)', fontWeight: 600 }}>(Up to 10 Files)</span>
               </label>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                📁 Upload 1 or multiple candidate resume files simultaneously
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                Compare up to 10 resumes against the same job description.
               </div>
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                style={{
+                  border: `2px dashed ${isDragging ? 'var(--accent-primary)' : 'var(--border)'}`,
+                  background: isDragging ? 'var(--accent-glow)' : 'var(--surface-elevated)',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  marginBottom: '12px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  const input = document.getElementById('resume-file-input') as HTMLInputElement;
+                  if (input) input.click();
+                }}
+              >
+                <Upload style={{ width: 24, height: 24, color: 'var(--accent-primary)', marginBottom: '4px' }} />
+                <p style={{ fontSize: '0.88rem', fontWeight: 600, margin: '4px 0', color: 'var(--text-primary)' }}>
+                  Drag & drop multiple resumes here
+                </p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Supports PDF, DOCX, TXT (Max 10 MB per file, max 10 files)
+                </p>
+              </div>
+
               <input
+                id="resume-file-input"
                 type="file"
                 multiple
                 accept=".pdf,.docx,.txt"
-                onChange={(e) => setResumeFiles(Array.from(e.target.files || []))}
-                style={{ display: 'block', width: '100%', marginBottom: '12px' }}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) handleAddResumeFiles(files);
+                  e.target.value = '';
+                }}
+                style={{ display: 'none' }}
               />
+
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ width: '100%', fontSize: '0.85rem', fontWeight: 700 }}
+                  onClick={() => {
+                    const input = document.getElementById('resume-file-input') as HTMLInputElement;
+                    if (input) input.click();
+                  }}
+                >
+                  + Add more resumes
+                </button>
+              </div>
+
+              {/* Selected Resume File Cards List */}
               {resumeFiles.length > 0 && (
-                <div style={{ marginTop: '10px', background: 'var(--surface-elevated)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ background: 'var(--surface-elevated)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <strong style={{ fontSize: '0.88rem', color: 'var(--success)' }}>
-                      📁 Selected Candidate Resumes ({resumeFiles.length} files):
+                      RESUMES ({resumeFiles.length})
                     </strong>
                     <button
                       type="button"
@@ -435,10 +586,11 @@ export default function CareerIntelligencePage() {
                       Clear All
                     </button>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
                     {resumeFiles.map((file, idx) => (
                       <div
-                        key={idx}
+                        key={`${file.name}-${file.size}-${idx}`}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -450,14 +602,19 @@ export default function CareerIntelligencePage() {
                           border: '1px solid var(--border)',
                         }}
                       >
-                        <span style={{ color: 'var(--text-primary)' }}>
-                          <strong style={{ color: 'var(--accent-primary)', marginRight: '6px' }}>{idx + 1})</strong>
-                          {file.name} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({(file.size / 1024).toFixed(1)} KB)</span>
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                          <span style={{ fontSize: '1rem' }}>📄</span>
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px', fontWeight: 600 }}>
+                            {file.name}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setResumeFiles(resumeFiles.filter((_, i) => i !== idx))}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', padding: '0 4px' }}
                           title="Remove file"
                         >
                           ✕
@@ -508,6 +665,31 @@ export default function CareerIntelligencePage() {
           </div>
         )}
 
+        {/* Real Step Progress Indicator during Processing */}
+        {isLoading && (
+          <div style={{ marginTop: '16px', padding: '16px', background: 'var(--surface-elevated)', borderRadius: '8px', border: '1px solid var(--accent-primary)' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--accent-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Zap style={{ width: 18, height: 18 }} /> {processingProgress.message || `Analyzing ${resumeFiles.length || 1} resumes...`}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {processingProgress.steps.map((step, idx) => (
+                <div key={idx} style={{ fontSize: '0.83rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {step.status === 'completed' ? (
+                    <span style={{ color: 'var(--success)', fontWeight: 800 }}>✓</span>
+                  ) : step.status === 'active' ? (
+                    <span style={{ color: 'var(--accent-primary)', fontWeight: 800 }}>⏳</span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)' }}>○</span>
+                  )}
+                  <span style={{ color: step.status === 'pending' ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+                    {step.label} {step.status === 'active' ? 'analyzing...' : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {errorMsg && (
           <div style={{ marginTop: '16px', padding: '12px', background: 'var(--danger-bg)', color: 'var(--danger)', borderRadius: '8px', fontSize: '0.9rem' }}>
             <AlertTriangle style={{ width: 16, height: 16, display: 'inline', marginRight: '6px' }} />
@@ -520,7 +702,11 @@ export default function CareerIntelligencePage() {
             🔒 Processed for this session
           </span>
           <button className="btn btn-hero" onClick={handleAnalyze} disabled={isLoading}>
-            {isLoading ? 'Analyzing Readiness & Building Career Twin...' : 'Analyze my job readiness →'}
+            {isLoading
+              ? `Analyzing ${resumeFiles.length || 1} resume(s)...`
+              : resumeFiles.length > 1
+              ? `Analyze ${resumeFiles.length} Resumes →`
+              : 'Analyze Job Readiness →'}
           </button>
         </div>
       </div>
@@ -632,57 +818,131 @@ export default function CareerIntelligencePage() {
       {/* Multi-Resume Candidate Comparison Matrix */}
       {multiReport && (
         <div className="console-card">
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Layers style={{ color: 'var(--accent-primary)' }} /> Multi-Candidate Comparison Matrix ({multiReport.totalResumesAnalyzed} Resumes)
-          </h2>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Layers style={{ color: 'var(--accent-primary)' }} /> MULTI-RESUME COMPARISON ({multiReport.totalResumesAnalyzed} Candidate Resumes)
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                Shared Job Description: <strong>{multiReport.jobTitle}</strong> ({multiReport.company})
+              </p>
+            </div>
+
+            {/* Sort Options Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>Sort Options:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                style={{
+                  background: 'var(--surface-elevated)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.83rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="readinessScore">Job Readiness Score</option>
+                <option value="atsScore">ATS Score</option>
+                <option value="alignmentScore">Alignment Score</option>
+                <option value="skillsMatchPct">Skills Match %</option>
+                <option value="projectRelevanceScore">Project Relevance</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Failed Files Alert Notice if any file failed */}
+          {multiReport.failedFiles && multiReport.failedFiles.length > 0 && (
+            <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: '8px', fontSize: '0.88rem', color: 'var(--danger)' }}>
+              <strong>⚠ {multiReport.failedFiles.length} resume(s) could not be parsed:</strong>
+              <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                {multiReport.failedFiles.map((ff, idx) => (
+                  <li key={idx}>
+                    📄 <strong>{ff.fileName}</strong>: {ff.reason}
+                  </li>
+                ))}
+              </ul>
+              <div style={{ fontSize: '0.78rem', marginTop: '6px', color: 'var(--text-secondary)' }}>
+                Continuing with successfully parsed candidate resumes below.
+              </div>
+            </div>
+          )}
+
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px', padding: '10px 14px', background: 'var(--surface-elevated)', borderRadius: '8px', borderLeft: '4px solid var(--accent-primary)' }}>
             💡 {multiReport.whyTopCandidateIsStrongest}
           </p>
+
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Candidate</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Filename</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Job Readiness</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Candidate Resume</th>
                   <th style={{ padding: '10px', textAlign: 'left' }}>ATS Score</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Tier</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Alignment</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Job Readiness</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Skills Match</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Project Relevance</th>
                   <th style={{ padding: '10px', textAlign: 'left' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {multiReport.comparisonTable.map((row, idx) => (
-                  <tr
-                    key={row.analysisId}
-                    style={{
-                      borderBottom: '1px solid var(--border)',
-                      background: selectedCandidateId === row.analysisId ? 'var(--accent-glow)' : 'transparent',
-                    }}
-                  >
-                    <td style={{ padding: '10px', fontWeight: 700 }}>
-                      <strong style={{ color: 'var(--accent-primary)', marginRight: '6px' }}>{idx + 1})</strong> {row.candidateName}
-                    </td>
-                    <td style={{ padding: '10px' }}>{row.filename}</td>
-                    <td style={{ padding: '10px', fontWeight: 900, color: 'var(--accent-primary)' }}>{row.readinessScore}%</td>
-                    <td style={{ padding: '10px' }}>{row.atsScore} / 100</td>
-                    <td style={{ padding: '10px' }}>
-                      <span className="status-badge status-strong">{row.overallTier}</span>
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                        onClick={() => {
-                          setSelectedCandidateId(row.analysisId);
-                          const found = multiReport.individualAnalyses.find((a) => a.id === row.analysisId);
-                          if (found) setSingleAnalysis(found);
+                {[...multiReport.comparisonTable]
+                  .sort((a, b) => {
+                    if (sortBy === 'atsScore') return b.atsScore - a.atsScore;
+                    if (sortBy === 'alignmentScore') return b.alignmentScore - a.alignmentScore;
+                    if (sortBy === 'skillsMatchPct') return b.skillsMatchPct - a.skillsMatchPct;
+                    if (sortBy === 'projectRelevanceScore') return b.projectRelevanceScore - a.projectRelevanceScore;
+                    return b.readinessScore - a.readinessScore;
+                  })
+                  .map((row, idx) => {
+                    const isTopMatch = idx === 0;
+                    return (
+                      <tr
+                        key={row.analysisId}
+                        style={{
+                          borderBottom: '1px solid var(--border)',
+                          background: selectedCandidateId === row.analysisId ? 'var(--accent-glow)' : 'transparent',
                         }}
                       >
-                        Select Profile
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        <td style={{ padding: '10px', fontWeight: 700 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {isTopMatch && (
+                              <span style={{ background: 'var(--accent-primary)', color: '#000', fontSize: '0.7rem', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>
+                                🏆 Strongest Match
+                              </span>
+                            )}
+                            <span>📄 {row.filename}</span>
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                            {row.candidateName} • ID: {row.candidateId}
+                          </div>
+                        </td>
+                        <td style={{ padding: '10px', fontWeight: 700 }}>{row.atsScore} / 100</td>
+                        <td style={{ padding: '10px', fontWeight: 700 }}>{row.alignmentScore}%</td>
+                        <td style={{ padding: '10px', fontWeight: 900, color: 'var(--accent-primary)', fontSize: '1.05rem' }}>
+                          {row.readinessScore}%
+                        </td>
+                        <td style={{ padding: '10px' }}>{row.skillsMatchPct}% ({row.matchedSkillsCount} matched)</td>
+                        <td style={{ padding: '10px' }}>{row.projectRelevanceScore}%</td>
+                        <td style={{ padding: '10px' }}>
+                          <button
+                            className={`btn ${selectedCandidateId === row.analysisId ? 'btn-hero' : 'btn-secondary'}`}
+                            style={{ padding: '4px 12px', fontSize: '0.8rem', fontWeight: 700 }}
+                            onClick={() => {
+                              setSelectedCandidateId(row.analysisId);
+                              const found = multiReport.individualAnalyses.find((a) => a.id === row.analysisId);
+                              if (found) setSingleAnalysis(found);
+                            }}
+                          >
+                            {selectedCandidateId === row.analysisId ? 'Selected Profile ✓' : 'View Candidate Analysis →'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

@@ -31,7 +31,8 @@ import { calculateWhatIfProjection } from './what-if-simulator';
 export function analyzeSingleResume(
   jdInput: string | StructuredJD,
   resumeInput: string | StructuredResume,
-  resumeFilename: string = 'Resume.pdf'
+  resumeFilename: string = 'Resume.pdf',
+  candidateId: string = 'candidate-1'
 ): FullAnalysisResult {
   // 1. Process JD & Resume
   const jd: StructuredJD = typeof jdInput === 'string' ? parseJobDescription(jdInput) : jdInput;
@@ -191,6 +192,7 @@ export function analyzeSingleResume(
 
   return {
     id,
+    candidateId,
     timestamp: new Date().toISOString(),
     candidateName: resume.candidateName,
     resumeFilename: resume.filename || resumeFilename,
@@ -236,29 +238,47 @@ export function analyzeSingleResume(
 
 export function analyzeMultipleResumes(
   jdInput: string | StructuredJD,
-  resumesInput: Array<{ content: string; filename: string }>
+  resumesInput: Array<{ content: string; filename: string }>,
+  failedFiles?: Array<{ fileName: string; reason: string }>
 ): MultiResumeAnalysisReport {
   const jd: StructuredJD = typeof jdInput === 'string' ? parseJobDescription(jdInput) : jdInput;
-  const individualAnalyses = resumesInput.map((res) => analyzeSingleResume(jd, res.content, res.filename));
+  const individualAnalyses = resumesInput.map((res, index) =>
+    analyzeSingleResume(jd, res.content, res.filename, `candidate-${index + 1}`)
+  );
 
-  const comparisonTable: ResumeComparisonRow[] = individualAnalyses.map((analysis) => ({
-    candidateName: analysis.candidateName,
-    filename: analysis.resumeFilename,
-    readinessScore: analysis.readinessScore.score,
-    atsScore: analysis.atsScore.totalScore,
-    matchedSkillsCount: analysis.matchedSkills ? analysis.matchedSkills.length : 0,
-    missingSkillsCount: analysis.whyNot100 ? analysis.whyNot100.length : 0,
-    overallTier: analysis.readinessScore.tier,
-    analysisId: analysis.id,
-    whyStrongestReason: `${analysis.readinessScore.score}% Job Readiness with ${analysis.careerTwin.technicalNodes.filter((n) => n.status === 'STRONG').length} strong technical skill matches.`,
-  }));
+  const comparisonTable: ResumeComparisonRow[] = individualAnalyses.map((analysis) => {
+    const totalSkillsCount = Math.max(1, analysis.matchedSkills.length + analysis.missingSkills.length);
+    const skillsMatchPct = Math.round((analysis.matchedSkills.length / totalSkillsCount) * 100);
+    const avgProjRelevance =
+      analysis.projectAnalysis.length > 0
+        ? Math.round(
+            analysis.projectAnalysis.reduce((sum, p) => sum + p.relevanceScore, 0) / analysis.projectAnalysis.length
+          )
+        : 70;
+
+    return {
+      candidateId: analysis.candidateId,
+      candidateName: analysis.candidateName,
+      filename: analysis.resumeFilename,
+      readinessScore: analysis.readinessScore.score,
+      atsScore: analysis.atsScore.totalScore,
+      alignmentScore: analysis.alignmentScore.score,
+      matchedSkillsCount: analysis.matchedSkills ? analysis.matchedSkills.length : 0,
+      missingSkillsCount: analysis.missingSkills ? analysis.missingSkills.length : 0,
+      skillsMatchPct,
+      projectRelevanceScore: avgProjRelevance,
+      overallTier: analysis.readinessScore.tier,
+      analysisId: analysis.id,
+      whyStrongestReason: `${analysis.readinessScore.score}% Job Readiness (${analysis.alignmentScore.score}% Alignment) with ${analysis.careerTwin.technicalNodes.filter((n) => n.status === 'STRONG').length} verified strong technical skills.`,
+    };
+  });
 
   // Default Sort by Job Readiness Score descending
   comparisonTable.sort((a, b) => b.readinessScore - a.readinessScore);
 
   const topCandidate = comparisonTable[0];
   const whyTopCandidateIsStrongest = topCandidate
-    ? `${topCandidate.candidateName} ranks first with ${topCandidate.readinessScore}% Job Readiness due to strongest mandatory skill coverage and verified project technical alignment.`
+    ? `${topCandidate.candidateName} ranks 🏆 Strongest Match with ${topCandidate.readinessScore}% Job Readiness and ${topCandidate.atsScore}/100 ATS score due to highest core requirement coverage.`
     : 'Comparative evaluation complete.';
 
   return {
@@ -267,6 +287,7 @@ export function analyzeMultipleResumes(
     totalResumesAnalyzed: individualAnalyses.length,
     comparisonTable,
     individualAnalyses,
+    failedFiles: failedFiles && failedFiles.length > 0 ? failedFiles : undefined,
     whyTopCandidateIsStrongest,
   };
 }

@@ -107,7 +107,7 @@ describe('MVP 1 Acceptance Suite — End-to-End Pipeline', () => {
     expect(analysis.usedLlmProvider).toBe(false);
   });
 
-  it('11. Multi-Resume Processing & Sortable Comparison', () => {
+  it('11. Multi-Resume Processing & Candidate IDs', () => {
     const report = analyzeMultipleResumes(DEMO_JOB_DESCRIPTION, [
       { content: DEMO_RESUME_A, filename: 'Candidate_A.pdf' },
       { content: DEMO_RESUME_B, filename: 'Candidate_B.pdf' },
@@ -116,8 +116,78 @@ describe('MVP 1 Acceptance Suite — End-to-End Pipeline', () => {
 
     expect(report.totalResumesAnalyzed).toBe(3);
     expect(report.comparisonTable.length).toBe(3);
-    // Verified sorting by ATS Score descending
-    expect(report.comparisonTable[0].atsScore).toBeGreaterThanOrEqual(report.comparisonTable[1].atsScore);
-    expect(report.comparisonTable[1].atsScore).toBeGreaterThanOrEqual(report.comparisonTable[2].atsScore);
+    expect(report.individualAnalyses.length).toBe(3);
+
+    // Verify candidate IDs
+    expect(report.individualAnalyses[0].candidateId).toBe('candidate-1');
+    expect(report.individualAnalyses[1].candidateId).toBe('candidate-2');
+    expect(report.individualAnalyses[2].candidateId).toBe('candidate-3');
+
+    // Verify shared JD context
+    expect(report.jobTitle).toContain('Full-Stack');
+    expect(report.individualAnalyses.every((a) => a.jobTitle === report.jobTitle)).toBe(true);
+  });
+
+  it('12. Multi-Resume Scale Tests (1, 2, 5, 10 Resumes)', () => {
+    // 1 resume
+    const report1 = analyzeMultipleResumes(DEMO_JOB_DESCRIPTION, [{ content: DEMO_RESUME_A, filename: 'Res1.pdf' }]);
+    expect(report1.totalResumesAnalyzed).toBe(1);
+
+    // 2 resumes
+    const report2 = analyzeMultipleResumes(DEMO_JOB_DESCRIPTION, [
+      { content: DEMO_RESUME_A, filename: 'Res1.pdf' },
+      { content: DEMO_RESUME_B, filename: 'Res2.pdf' },
+    ]);
+    expect(report2.totalResumesAnalyzed).toBe(2);
+
+    // 5 resumes
+    const list5 = Array.from({ length: 5 }, (_, i) => ({
+      content: i % 2 === 0 ? DEMO_RESUME_A : DEMO_RESUME_B,
+      filename: `Resume_${i + 1}.pdf`,
+    }));
+    const report5 = analyzeMultipleResumes(DEMO_JOB_DESCRIPTION, list5);
+    expect(report5.totalResumesAnalyzed).toBe(5);
+
+    // 10 resumes
+    const list10 = Array.from({ length: 10 }, (_, i) => ({
+      content: i % 3 === 0 ? DEMO_RESUME_A : i % 3 === 1 ? DEMO_RESUME_B : DEMO_RESUME_C,
+      filename: `Resume_${i + 1}.pdf`,
+    }));
+    const report10 = analyzeMultipleResumes(DEMO_JOB_DESCRIPTION, list10);
+    expect(report10.totalResumesAnalyzed).toBe(10);
+    expect(report10.comparisonTable.length).toBe(10);
+  });
+
+  it('13. Multi-Resume Comparison Table Sortability & Winner Highlight', () => {
+    const report = analyzeMultipleResumes(DEMO_JOB_DESCRIPTION, [
+      { content: DEMO_RESUME_A, filename: 'Senior.pdf' },
+      { content: DEMO_RESUME_B, filename: 'Mid.pdf' },
+      { content: DEMO_RESUME_C, filename: 'Junior.pdf' },
+    ]);
+
+    // Comparison rows check
+    expect(report.comparisonTable[0].readinessScore).toBeGreaterThanOrEqual(report.comparisonTable[1].readinessScore);
+    expect(report.comparisonTable[1].readinessScore).toBeGreaterThanOrEqual(report.comparisonTable[2].readinessScore);
+    expect(report.whyTopCandidateIsStrongest).toContain('Strongest Match');
+    expect(report.comparisonTable[0].alignmentScore).toBeDefined();
+    expect(report.comparisonTable[0].skillsMatchPct).toBeDefined();
+    expect(report.comparisonTable[0].projectRelevanceScore).toBeDefined();
+  });
+
+  it('14. Partial Failure Handling with failedFiles', () => {
+    const failedFiles = [{ fileName: 'Corrupted.pdf', reason: 'Unable to extract readable text from this PDF.' }];
+    const report = analyzeMultipleResumes(
+      DEMO_JOB_DESCRIPTION,
+      [
+        { content: DEMO_RESUME_A, filename: 'Valid_A.pdf' },
+        { content: DEMO_RESUME_B, filename: 'Valid_B.pdf' },
+      ],
+      failedFiles
+    );
+
+    expect(report.totalResumesAnalyzed).toBe(2);
+    expect(report.failedFiles).toBeDefined();
+    expect(report.failedFiles?.length).toBe(1);
+    expect(report.failedFiles?.[0].fileName).toBe('Corrupted.pdf');
   });
 });
