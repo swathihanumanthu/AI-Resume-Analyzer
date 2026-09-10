@@ -717,12 +717,17 @@ export default function CareerIntelligencePage() {
           💬 Connect Career Copilot on Messaging Apps
         </h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Click any platform card below to launch or connect Career Copilot directly in your favorite messaging app:
+          Click any platform card below to launch the mobile app directly on your phone or view bot commands:
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
           <div
-            onClick={() => setActiveBotModal('telegram')}
+            onClick={() => {
+              setActiveBotModal('telegram');
+              if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                window.location.href = 'tg://msg?text=/start';
+              }
+            }}
             style={{
               background: 'var(--surface-elevated)',
               padding: '16px',
@@ -740,12 +745,17 @@ export default function CareerIntelligencePage() {
               className="btn btn-secondary"
               style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#38bdf8', borderColor: '#38bdf8' }}
             >
-              🚀 Launch Bot & View Commands →
+              🚀 Launch Mobile App & View Output →
             </button>
           </div>
 
           <div
-            onClick={() => setActiveBotModal('discord')}
+            onClick={() => {
+              setActiveBotModal('discord');
+              if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                window.location.href = 'discord://';
+              }
+            }}
             style={{
               background: 'var(--surface-elevated)',
               padding: '16px',
@@ -763,12 +773,17 @@ export default function CareerIntelligencePage() {
               className="btn btn-secondary"
               style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#818cf8', borderColor: '#818cf8' }}
             >
-              🚀 Launch Bot & View Commands →
+              🚀 Launch Mobile App & View Output →
             </button>
           </div>
 
           <div
-            onClick={() => setActiveBotModal('whatsapp')}
+            onClick={() => {
+              setActiveBotModal('whatsapp');
+              if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                window.location.href = 'whatsapp://send?text=Analyze%20my%20resume';
+              }
+            }}
             style={{
               background: 'var(--surface-elevated)',
               padding: '16px',
@@ -786,12 +801,17 @@ export default function CareerIntelligencePage() {
               className="btn btn-secondary"
               style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#34d399', borderColor: '#34d399' }}
             >
-              🚀 Launch Bot & View Commands →
+              🚀 Launch Mobile App & View Output →
             </button>
           </div>
 
           <div
-            onClick={() => setActiveBotModal('google-chat')}
+            onClick={() => {
+              setActiveBotModal('google-chat');
+              if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                window.location.href = 'googlechat://';
+              }
+            }}
             style={{
               background: 'var(--surface-elevated)',
               padding: '16px',
@@ -809,7 +829,7 @@ export default function CareerIntelligencePage() {
               className="btn btn-secondary"
               style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#f472b6', borderColor: '#f472b6' }}
             >
-              🚀 Launch Bot & View Commands →
+              🚀 Launch Mobile App & View Output →
             </button>
           </div>
         </div>

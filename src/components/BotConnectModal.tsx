@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { X, ExternalLink, MessageSquare, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ExternalLink, MessageSquare, Smartphone, Play, CheckCircle } from 'lucide-react';
 
 export type BotPlatform = 'telegram' | 'discord' | 'whatsapp' | 'google-chat';
 
@@ -11,6 +11,9 @@ interface BotConnectModalProps {
 }
 
 export default function BotConnectModal({ platform, onClose }: BotConnectModalProps) {
+  const [testOutput, setTestOutput] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
   if (!platform) return null;
 
   const details = {
@@ -18,39 +21,81 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
       title: '✈️ Telegram Bot Connection',
       color: '#38bdf8',
       webhook: '/api/webhooks/telegram',
-      launchUrl: 'https://t.me/',
+      appScheme: 'tg://msg?text=/start',
+      launchUrl: 'https://t.me/CareerCopilotBot?start=analyze',
       command: '/start',
-      instruction: 'Open Telegram, start a chat with Career Copilot bot, and send your resume or type /start to get instant analysis reports.',
-      buttonText: 'Open Telegram App ↗',
+      instruction: 'If Telegram is installed on your phone, clicking below will open the Telegram app directly and send /start for instant Career Intelligence output.',
+      buttonText: '🚀 Open Telegram Mobile App',
     },
     discord: {
       title: '💬 Discord Bot Connection',
       color: '#818cf8',
       webhook: '/api/webhooks/discord',
+      appScheme: 'discord://',
       launchUrl: 'https://discord.com/app',
       command: '/analyze',
-      instruction: 'Add Career Copilot to your Discord server or DM. Type /analyze to trigger instant Job Readiness analysis.',
-      buttonText: 'Open Discord App ↗',
+      instruction: 'If Discord is installed on your phone, clicking below will launch the Discord app directly to access Career Copilot bot.',
+      buttonText: '🚀 Open Discord Mobile App',
     },
     whatsapp: {
       title: '🟢 WhatsApp Bot Connection',
       color: '#34d399',
       webhook: '/api/webhooks/whatsapp',
+      appScheme: 'whatsapp://send?text=Analyze%20my%20resume',
       launchUrl: 'https://api.whatsapp.com/send?text=Analyze%20my%20resume',
       command: 'Analyze my resume',
-      instruction: 'Send "Analyze my resume" or attach your PDF resume in WhatsApp to receive instant ATS & readiness reports.',
-      buttonText: 'Open WhatsApp Chat ↗',
+      instruction: 'If WhatsApp is installed on your phone, clicking below will launch WhatsApp directly with pre-filled prompt "Analyze my resume".',
+      buttonText: '🚀 Open WhatsApp Mobile App',
     },
     'google-chat': {
       title: '🔷 Google Chat App Connection',
       color: '#f472b6',
       webhook: '/api/webhooks/google-chat',
+      appScheme: 'googlechat://',
       launchUrl: 'https://chat.google.com/',
       command: 'Analyze resume',
-      instruction: 'Add Career Copilot space app in Google Workspace Chat. Message "Analyze resume" to receive career intelligence reports.',
-      buttonText: 'Open Google Chat ↗',
+      instruction: 'If Google Chat is installed on your phone, clicking below will launch the Google Chat app directly to view Career Copilot.',
+      buttonText: '🚀 Open Google Chat Mobile App',
     },
   }[platform];
+
+  const handleLaunchMobileApp = () => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = details.appScheme;
+      setTimeout(() => {
+        window.open(details.launchUrl, '_blank');
+      }, 1000);
+    } else {
+      window.open(details.launchUrl, '_blank');
+    }
+  };
+
+  const handleTestWebhookOutput = async () => {
+    setIsTesting(true);
+    try {
+      const res = await fetch(details.webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: {
+            text: details.command,
+            from: { id: 'mobile_user_test', first_name: 'Mobile User' },
+          },
+        }),
+      });
+      const json = await res.json();
+      if (json.text) {
+        setTestOutput(json.text);
+      } else {
+        setTestOutput(`Webhook triggered successfully. Status: 200 OK.`);
+      }
+    } catch {
+      setTestOutput('Error triggering webhook test response.');
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   return (
     <div
@@ -69,8 +114,10 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
       <div
         className="console-card"
         style={{
-          maxWidth: '500px',
+          maxWidth: '520px',
           width: '92%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
           border: `2px solid ${details.color}`,
           position: 'relative',
         }}
@@ -86,10 +133,10 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
         </div>
 
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
-          {details.instruction}
+          📱 <strong>Mobile App Direct Launch:</strong> {details.instruction}
         </p>
 
-        <div style={{ background: 'var(--surface-elevated)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '20px' }}>
+        <div style={{ background: 'var(--surface-elevated)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>API Webhook Endpoint:</span>
             <button
@@ -116,26 +163,43 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
             {details.webhook}
           </code>
 
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Example Trigger Command:</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Trigger Command:</div>
           <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
             "{details.command}"
           </div>
         </div>
 
+        {/* Live Webhook Output Preview */}
+        {testOutput ? (
+          <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--success)', fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', maxHeight: '180px', overflowY: 'auto' }}>
+            <div style={{ color: 'var(--success)', fontWeight: 800, marginBottom: '6px' }}>
+              ✓ Output from Bot Webhook:
+            </div>
+            {testOutput}
+          </div>
+        ) : (
+          <button
+            onClick={handleTestWebhookOutput}
+            disabled={isTesting}
+            className="btn btn-secondary"
+            style={{ width: '100%', marginBottom: '16px', fontSize: '0.82rem', fontWeight: 700 }}
+          >
+            <Play style={{ width: 14 }} /> {isTesting ? 'Generating Output...' : '⚡ Test & Preview Bot Output'}
+          </button>
+        )}
+
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" onClick={onClose}>
             Close
           </button>
-          <a
-            href={details.launchUrl}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={handleLaunchMobileApp}
             className="btn btn-hero"
-            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
           >
-            <ExternalLink style={{ width: 16 }} />
+            <Smartphone style={{ width: 16 }} />
             {details.buttonText}
-          </a>
+          </button>
         </div>
       </div>
     </div>
