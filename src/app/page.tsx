@@ -422,8 +422,49 @@ export default function CareerIntelligencePage() {
                 style={{ display: 'block', width: '100%', marginBottom: '12px' }}
               />
               {resumeFiles.length > 0 && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--success)' }}>
-                  Selected {resumeFiles.length} file(s): {resumeFiles.map((f) => f.name).join(', ')}
+                <div style={{ marginTop: '10px', background: 'var(--surface-elevated)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '0.88rem', color: 'var(--success)' }}>
+                      📁 Selected Candidate Resumes ({resumeFiles.length} files):
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => setResumeFiles([])}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.78rem', textDecoration: 'underline', fontWeight: 700 }}
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {resumeFiles.map((file, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: 'var(--bg-primary)',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.83rem',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
+                        <span style={{ color: 'var(--text-primary)' }}>
+                          <strong style={{ color: 'var(--accent-primary)', marginRight: '6px' }}>{idx + 1})</strong>
+                          {file.name} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({(file.size / 1024).toFixed(1)} KB)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setResumeFiles(resumeFiles.filter((_, i) => i !== idx))}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
+                          title="Remove file"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -610,7 +651,7 @@ export default function CareerIntelligencePage() {
                 </tr>
               </thead>
               <tbody>
-                {multiReport.comparisonTable.map((row) => (
+                {multiReport.comparisonTable.map((row, idx) => (
                   <tr
                     key={row.analysisId}
                     style={{
@@ -618,7 +659,9 @@ export default function CareerIntelligencePage() {
                       background: selectedCandidateId === row.analysisId ? 'var(--accent-glow)' : 'transparent',
                     }}
                   >
-                    <td style={{ padding: '10px', fontWeight: 700 }}>{row.candidateName}</td>
+                    <td style={{ padding: '10px', fontWeight: 700 }}>
+                      <strong style={{ color: 'var(--accent-primary)', marginRight: '6px' }}>{idx + 1})</strong> {row.candidateName}
+                    </td>
                     <td style={{ padding: '10px' }}>{row.filename}</td>
                     <td style={{ padding: '10px', fontWeight: 900, color: 'var(--accent-primary)' }}>{row.readinessScore}%</td>
                     <td style={{ padding: '10px' }}>{row.atsScore} / 100</td>
