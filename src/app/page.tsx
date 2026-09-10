@@ -838,6 +838,63 @@ export default function CareerIntelligencePage() {
                 </div>
               </div>
 
+              {/* Top 3 Recommended Courses Matched to Uploaded JD */}
+              <div className="console-card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🎓 Top 3 Recommended Courses & Learning Paths (Matched to Uploaded JD)
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                  Hand-picked targeted courses and learning paths matched specifically to closing qualification gaps for <strong>{singleAnalysis.jobTitle}</strong>:
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  {singleAnalysis.courseRecommendations.slice(0, 3).map((course, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        background: 'var(--surface-elevated)',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justify: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span className="priority-tag priority-critical" style={{ background: 'var(--accent-purple)', color: '#fff' }}>
+                            Top {idx + 1} Course
+                          </span>
+                          <span style={{ fontSize: '0.75rem', background: 'var(--surface-hover)', padding: '2px 8px', borderRadius: '4px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                            {course.availabilityTag}
+                          </span>
+                        </div>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                          {course.courseTitle}
+                        </h3>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600, marginBottom: '8px' }}>
+                          Provider: {course.provider} • Skill: {course.skillCovered} ({course.estimatedDuration})
+                        </div>
+                        <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.4 }}>
+                          💡 <strong>Why Recommended:</strong> {course.whyRecommended}
+                        </p>
+                      </div>
+
+                      <a
+                        href={course.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-secondary"
+                        style={{ width: '100%', textAlign: 'center', textDecoration: 'none', marginTop: 'auto', fontSize: '0.8rem', fontWeight: 700 }}
+                      >
+                        Start Top {idx + 1} Course ↗
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* 7. #1 Next Step Engine */}
               <div className="console-card" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
                 <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>🧠 Your #1 Next Step</h2>

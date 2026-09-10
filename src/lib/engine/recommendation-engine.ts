@@ -36,17 +36,18 @@ export function generateSkillRoadmap(
 }
 
 export function generateCourseRecommendations(
+  jd: StructuredJD,
   missingSkills: SkillMatchResult[]
 ): CourseRecommendation[] {
   const resourceCatalog: Record<string, CourseRecommendation> = {
     Docker: {
       courseTitle: 'Docker Curriculum & Hands-on Containerization',
-      provider: 'Docker Official Documentation',
+      provider: 'Docker Official Docs',
       skillCovered: 'Docker',
       difficulty: 'Beginner',
       estimatedDuration: '4 hours',
       availabilityTag: 'Official Documentation',
-      whyRecommended: 'Industry standard official guide for learning Docker container builds and docker-compose.',
+      whyRecommended: `Essential containerization requirement for '${jd.jobTitle}'. Master container builds and docker-compose deployment.`,
       url: 'https://docs.docker.com/get-started/',
     },
     AWS: {
@@ -56,17 +57,17 @@ export function generateCourseRecommendations(
       difficulty: 'Beginner',
       estimatedDuration: '6 hours',
       availabilityTag: 'Free Tier',
-      whyRecommended: 'Official free AWS training covering core cloud compute (EC2), storage (S3), and deployment.',
+      whyRecommended: `Official free AWS cloud training covering EC2, S3, and cloud deployment required for '${jd.jobTitle}'.`,
       url: 'https://explore.skillbuilder.aws/',
     },
     PostgreSQL: {
       courseTitle: 'PostgreSQL Tutorial & Relational Database Design',
-      provider: 'PostgreSQL Documentation & PostgresTutorial',
+      provider: 'PostgresTutorial',
       skillCovered: 'PostgreSQL',
       difficulty: 'Intermediate',
       estimatedDuration: '5 hours',
       availabilityTag: 'Official Documentation',
-      whyRecommended: 'Comprehensive free documentation covering SQL indexing, relational queries, and schema design.',
+      whyRecommended: `Comprehensive database guide covering SQL indexing, relational queries, and schema optimization for '${jd.jobTitle}'.`,
       url: 'https://www.postgresqltutorial.com/',
     },
     React: {
@@ -76,17 +77,17 @@ export function generateCourseRecommendations(
       difficulty: 'Beginner',
       estimatedDuration: '5 hours',
       availabilityTag: 'Official Documentation',
-      whyRecommended: 'Modern React 18+ documentation with interactive code sandboxes covering hooks and state management.',
+      whyRecommended: `Modern React 18+ documentation with interactive sandboxes covering hooks and state management.`,
       url: 'https://react.dev/learn',
     },
     'REST API': {
       courseTitle: 'MDN HTTP & RESTful API Guidelines',
-      provider: 'Mozilla Developer Network (MDN)',
+      provider: 'MDN Web Docs',
       skillCovered: 'REST API',
       difficulty: 'Beginner',
       estimatedDuration: '3 hours',
       availabilityTag: 'Official Documentation',
-      whyRecommended: 'Authoritative guide to HTTP methods, status codes, headers, and RESTful web service architecture.',
+      whyRecommended: `Authoritative guide to HTTP methods, status codes, headers, and RESTful web service architecture for '${jd.jobTitle}'.`,
       url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP',
     },
     'CI/CD': {
@@ -96,7 +97,7 @@ export function generateCourseRecommendations(
       difficulty: 'Intermediate',
       estimatedDuration: '3 hours',
       availabilityTag: 'Official Documentation',
-      whyRecommended: 'Learn automated build, test, and deployment pipelines directly inside GitHub repositories.',
+      whyRecommended: `Learn automated build, test, and deployment pipelines directly inside GitHub repositories.`,
       url: 'https://docs.github.com/en/actions',
     },
     'Generative AI': {
@@ -106,32 +107,92 @@ export function generateCourseRecommendations(
       difficulty: 'Intermediate',
       estimatedDuration: '8 hours',
       availabilityTag: 'Free-to-Audit',
-      whyRecommended: 'Official course covering LLMs, prompt engineering, and RAG architecture principles.',
+      whyRecommended: `Official course covering LLMs, prompt engineering, and RAG architecture principles for '${jd.jobTitle}'.`,
       url: 'https://www.cloudskillsboost.google/course_templates/536',
+    },
+    Python: {
+      courseTitle: 'Python for Beginners & Data Structures',
+      provider: 'Python.org / FreeCodeCamp',
+      skillCovered: 'Python',
+      difficulty: 'Beginner',
+      estimatedDuration: '6 hours',
+      availabilityTag: 'Free Tutorial',
+      whyRecommended: `Master core Python syntax, OOP, and data structures specified in '${jd.jobTitle}' requirements.`,
+      url: 'https://docs.python.org/3/tutorial/',
+    },
+    TypeScript: {
+      courseTitle: 'TypeScript Handbook & Type System Masterclass',
+      provider: 'TypeScriptLang.org',
+      skillCovered: 'TypeScript',
+      difficulty: 'Intermediate',
+      estimatedDuration: '4 hours',
+      availabilityTag: 'Official Documentation',
+      whyRecommended: `Learn static typing, interfaces, and generics required for production JavaScript codebases in '${jd.jobTitle}'.`,
+      url: 'https://www.typescriptlang.org/docs/handbook/intro.html',
+    },
+    'Node.js': {
+      courseTitle: 'Node.js Express & Backend Architecture',
+      provider: 'Nodejs.org Docs',
+      skillCovered: 'Node.js',
+      difficulty: 'Intermediate',
+      estimatedDuration: '5 hours',
+      availabilityTag: 'Official Documentation',
+      whyRecommended: `Master async I/O, Express routing, and middleware development required for '${jd.jobTitle}'.`,
+      url: 'https://nodejs.org/en/docs/guides/',
     },
   };
 
   const recommendations: CourseRecommendation[] = [];
+  const processedSkills = new Set<string>();
 
+  // 1. First add targeted courses for missing skills
   missingSkills.forEach((missing) => {
+    if (processedSkills.has(missing.canonicalSkill)) return;
+    processedSkills.add(missing.canonicalSkill);
+
     const entry = resourceCatalog[missing.canonicalSkill];
     if (entry) {
       recommendations.push(entry);
     } else {
       recommendations.push({
-        courseTitle: `${missing.jdSkill} Free Developer Guide`,
+        courseTitle: `${missing.jdSkill} Developer Masterclass & Practical Guide`,
         provider: 'FreeCodeCamp / Official Docs',
         skillCovered: missing.jdSkill,
         difficulty: 'Beginner',
         estimatedDuration: '4–6 hours',
         availabilityTag: 'Free Tutorial',
-        whyRecommended: `Recommended resource to quickly build foundational competency in ${missing.jdSkill}.`,
+        whyRecommended: `Top-rated resource to build foundational competency in ${missing.jdSkill} required for '${jd.jobTitle}'.`,
         url: `https://www.google.com/search?q=${encodeURIComponent(missing.jdSkill + ' official documentation tutorial free')}`,
       });
     }
   });
 
-  return recommendations;
+  // 2. If fewer than 3 courses, fill with core mandatory JD skills
+  const fallbackSkills = [...(jd.mustHaveSkills || []), ...(jd.niceToHaveSkills || [])];
+  for (const skill of fallbackSkills) {
+    if (recommendations.length >= 3) break;
+    if (processedSkills.has(skill)) continue;
+    processedSkills.add(skill);
+
+    const entry = resourceCatalog[skill];
+    if (entry) {
+      recommendations.push(entry);
+    } else {
+      recommendations.push({
+        courseTitle: `${skill} Core Skills & Advanced Patterns`,
+        provider: 'Official Docs & Free Tutorials',
+        skillCovered: skill,
+        difficulty: 'Intermediate',
+        estimatedDuration: '4 hours',
+        availabilityTag: 'Official Documentation',
+        whyRecommended: `Targeted course matching core '${jd.jobTitle}' tech stack requirement '${skill}'.`,
+        url: `https://www.google.com/search?q=${encodeURIComponent(skill + ' documentation tutorial free')}`,
+      });
+    }
+  }
+
+  // Guarantee strictly Top 3 courses
+  return recommendations.slice(0, 3);
 }
 
 export function generateProjectRecommendations(

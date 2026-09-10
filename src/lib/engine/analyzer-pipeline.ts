@@ -182,7 +182,7 @@ export function analyzeSingleResume(
   const sectionAnalysis = analyzeSections(jd, resume);
   const projectAnalysis = analyzeProjects(jd, resume);
   const recommendedSkills = generateSkillRoadmap(jd, missing);
-  const courseRecommendations = generateCourseRecommendations(missing);
+  const courseRecommendations = generateCourseRecommendations(jd, missing);
   const projectRecommendations = generateProjectRecommendations(jd, missing);
   const roadmap = generateImprovementRoadmap(resume, missing);
   const { allQuestions, mostLikelyQuestions } = generateInterviewQuestions(jd, resume, missing);
