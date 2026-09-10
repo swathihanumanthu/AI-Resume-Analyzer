@@ -122,6 +122,25 @@ export default function CareerIntelligencePage() {
 
     try {
       if (activeInputTab === 'upload') {
+        // If no files/text selected, load sample data automatically for 1-click convenience
+        if (!jdFile && !jdText && resumeFiles.length === 0) {
+          const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isDemo: true }),
+          });
+          const json = await res.json();
+          if (!json.success) throw new Error(json.error || 'Sample data load failed');
+
+          setMultiReport(json.data);
+          if (json.data.individualAnalyses.length > 0) {
+            setSingleAnalysis(json.data.individualAnalyses[0]);
+            setSelectedCandidateId(json.data.individualAnalyses[0].id);
+          }
+          setActiveJourneyStep('understand');
+          return;
+        }
+
         if (!jdFile && !jdText) throw new Error('Please upload a Job Description file or paste the JD text.');
         if (resumeFiles.length === 0) throw new Error('Please upload at least one Resume file (PDF, DOCX, or TXT).');
 
@@ -144,6 +163,24 @@ export default function CareerIntelligencePage() {
           }
         }
       } else {
+        if (!jdText && !pastedResumeText) {
+          const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isDemo: true }),
+          });
+          const json = await res.json();
+          if (!json.success) throw new Error(json.error || 'Sample data load failed');
+
+          setMultiReport(json.data);
+          if (json.data.individualAnalyses.length > 0) {
+            setSingleAnalysis(json.data.individualAnalyses[0]);
+            setSelectedCandidateId(json.data.individualAnalyses[0].id);
+          }
+          setActiveJourneyStep('understand');
+          return;
+        }
+
         if (!jdText) throw new Error('Please enter Job Description text.');
         if (!pastedResumeText) throw new Error('Please paste candidate resume text.');
 
