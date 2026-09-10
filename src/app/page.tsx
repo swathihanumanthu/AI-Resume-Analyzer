@@ -141,8 +141,26 @@ export default function CareerIntelligencePage() {
           return;
         }
 
-        if (!jdFile && !jdText) throw new Error('Please upload a Job Description file or paste the JD text.');
-        if (resumeFiles.length === 0) throw new Error('Please upload at least one Resume file (PDF, DOCX, or TXT).');
+        if (!jdFile && !jdText && resumeFiles.length === 0) {
+          const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isDemo: true }),
+          });
+          const json = await res.json();
+          if (!json.success) throw new Error(json.error || 'Sample data load failed');
+
+          setMultiReport(json.data);
+          if (json.data.individualAnalyses.length > 0) {
+            setSingleAnalysis(json.data.individualAnalyses[0]);
+            setSelectedCandidateId(json.data.individualAnalyses[0].id);
+          }
+          setActiveJourneyStep('understand');
+          return;
+        }
+
+        if (!jdFile && !jdText) throw new Error('Please select or paste a Job Description.');
+        if (resumeFiles.length === 0) throw new Error('Please select at least one Candidate Resume file.');
 
         const formData = new FormData();
         if (jdFile) formData.append('jdFile', jdFile);
@@ -341,10 +359,31 @@ export default function CareerIntelligencePage() {
               </div>
               <input
                 type="file"
+                multiple={false}
                 accept=".pdf,.docx,.txt"
-                onChange={(e) => setJdFile(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 1) {
+                    setErrorMsg('⚠️ Only 1 Job Description file is allowed. Selected the first file.');
+                  } else {
+                    setErrorMsg('');
+                  }
+                  setJdFile(files[0] || null);
+                }}
                 style={{ display: 'block', width: '100%', marginBottom: '8px' }}
               />
+              {jdFile && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🎯 Selected Single JD: <strong>{jdFile.name}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setJdFile(null)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
               <textarea
                 rows={3}
                 placeholder="Or paste Job Description text..."

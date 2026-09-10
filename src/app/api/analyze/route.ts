@@ -45,7 +45,16 @@ export async function POST(req: NextRequest) {
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       const jdTextRaw = formData.get('jdText') as string;
-      const jdFile = formData.get('jdFile') as File | null;
+      const jdFiles = formData.getAll('jdFile') as File[];
+
+      if (jdFiles.length > 1) {
+        return NextResponse.json(
+          { success: false, error: 'Only 1 Job Description file can be uploaded. Multiple JD files are not allowed.' },
+          { status: 400 }
+        );
+      }
+
+      const jdFile = jdFiles.length > 0 ? jdFiles[0] : null;
       const resumeFiles = formData.getAll('resumes') as File[];
 
       let extractedJdText = '';
