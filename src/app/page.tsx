@@ -26,6 +26,7 @@ import CareerTwinView from '../components/CareerTwinView';
 import AiInterviewerPanel from '../components/AiInterviewerPanel';
 import ProductTourModal from '../components/ProductTourModal';
 import PrivacyModal from '../components/PrivacyModal';
+import BotConnectModal, { BotPlatform } from '../components/BotConnectModal';
 
 export default function CareerIntelligencePage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -46,6 +47,7 @@ export default function CareerIntelligencePage() {
   const [activeJourneyStep, setActiveJourneyStep] = useState<'understand' | 'diagnose' | 'improve' | 'simulate' | 'prepare'>('understand');
   const [showWhyNot100, setShowWhyNot100] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [activeBotModal, setActiveBotModal] = useState<BotPlatform | null>(null);
 
   // Product Tour Modal State
   const [isTourOpen, setIsTourOpen] = useState(false);
@@ -405,32 +407,76 @@ export default function CareerIntelligencePage() {
           💬 Connect Career Copilot on Messaging Apps
         </h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Get instant Career Intelligence, ATS score explanations, and mock interview practice directly in your favorite messaging apps:
+          Click any platform card below to launch or connect Career Copilot directly in your favorite messaging app:
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-            <strong style={{ color: '#38bdf8', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>✈️ Telegram Bot</strong>
+          <div
+            onClick={() => setActiveBotModal('telegram')}
+            style={{
+              background: 'var(--surface-elevated)',
+              padding: '14px',
+              borderRadius: '10px',
+              border: '1px solid var(--border)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            className="console-card-interactive"
+          >
+            <strong style={{ color: '#38bdf8', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>✈️ Telegram Bot ↗</strong>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/telegram</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Command: /start or send resume</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
           </div>
 
-          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-            <strong style={{ color: '#818cf8', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>💬 Discord Bot</strong>
+          <div
+            onClick={() => setActiveBotModal('discord')}
+            style={{
+              background: 'var(--surface-elevated)',
+              padding: '14px',
+              borderRadius: '10px',
+              border: '1px solid var(--border)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            className="console-card-interactive"
+          >
+            <strong style={{ color: '#818cf8', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>💬 Discord Bot ↗</strong>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/discord</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Slash Command: /analyze</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
           </div>
 
-          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-            <strong style={{ color: '#34d399', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>🟢 WhatsApp Bot</strong>
+          <div
+            onClick={() => setActiveBotModal('whatsapp')}
+            style={{
+              background: 'var(--surface-elevated)',
+              padding: '14px',
+              borderRadius: '10px',
+              border: '1px solid var(--border)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            className="console-card-interactive"
+          >
+            <strong style={{ color: '#34d399', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>🟢 WhatsApp Bot ↗</strong>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/whatsapp</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Send: "Analyze my resume"</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
           </div>
 
-          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-            <strong style={{ color: '#f472b6', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>🔷 Google Chat App</strong>
+          <div
+            onClick={() => setActiveBotModal('google-chat')}
+            style={{
+              background: 'var(--surface-elevated)',
+              padding: '14px',
+              borderRadius: '10px',
+              border: '1px solid var(--border)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            className="console-card-interactive"
+          >
+            <strong style={{ color: '#f472b6', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>🔷 Google Chat App ↗</strong>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/google-chat</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Message: "Analyze resume"</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
           </div>
         </div>
       </div>
@@ -939,6 +985,12 @@ export default function CareerIntelligencePage() {
       <PrivacyModal
         isOpen={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
+      />
+
+      {/* Messaging Bot Connect Modal */}
+      <BotConnectModal
+        platform={activeBotModal}
+        onClose={() => setActiveBotModal(null)}
       />
     </div>
   );
