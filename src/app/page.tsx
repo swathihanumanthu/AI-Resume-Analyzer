@@ -359,6 +359,7 @@ export default function CareerIntelligencePage() {
               </div>
               <input
                 type="file"
+                disabled={!!jdFile}
                 multiple={false}
                 accept=".pdf,.docx,.txt"
                 onChange={(e) => {
@@ -370,17 +371,23 @@ export default function CareerIntelligencePage() {
                   }
                   setJdFile(files[0] || null);
                 }}
-                style={{ display: 'block', width: '100%', marginBottom: '8px' }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  marginBottom: '8px',
+                  opacity: jdFile ? 0.5 : 1,
+                  cursor: jdFile ? 'not-allowed' : 'pointer',
+                }}
               />
               {jdFile && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>🎯 Selected Single JD: <strong>{jdFile.name}</strong></span>
+                <div style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'var(--surface-elevated)', borderRadius: '6px', border: '1px solid var(--accent-primary)' }}>
+                  <span>🔒 <strong>Single JD Locked:</strong> {jdFile.name} (File button disabled)</span>
                   <button
                     type="button"
                     onClick={() => setJdFile(null)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'underline', marginLeft: 'auto' }}
                   >
-                    Remove
+                    Remove / Change JD
                   </button>
                 </div>
               )}
