@@ -20,9 +20,45 @@ An explainable career intelligence platform that transforms any job description 
 10. **Recruiter Lens & 10-Second Resume Test**: Simulates 10-second recruiter scans (`VISIBLE IN FIRST 10 SECONDS` vs `NOT IMMEDIATELY OBVIOUS`) with signal analysis.
 11. **Resume Health Audit**: Computed scores for ATS parseability, keyword coverage, evidence quality, structure, and readability.
 12. **Strict AI Interviewer & Mock Practice**: Multi-dimensional rubrics, question relevance gating (<20% relevance flags off-topic answers as `🔴 Weak`), keyword-stuffing penalties, unsupported resume claim warnings, and adaptive follow-up prompts.
-13. **Career Copilot Assistant**: Floating AI assistant drawer providing session-aware career advice.
+13. **Multi-Platform Career Copilot Assistant**: Unified bot connecting Telegram, Discord, Google Chat, and WhatsApp directly to the live analysis engine.
 14. **✨ Guided Product Tour**: Interactive 9-step guided tour explaining the full analysis pipeline with sample data.
 15. **Multi-Format Export & Privacy**: Export reports as PDF, Markdown, or JSON. Processed strictly in-memory per session with no persistent document storage.
+
+---
+
+## 🤖 Multi-Platform Messaging Bot Setup
+
+Connect Career Copilot to messaging platforms using Vercel/Next.js API webhooks.
+
+### Webhook Endpoints
+- **Telegram**: `POST /api/webhooks/telegram`
+- **Discord**: `POST /api/webhooks/discord`
+- **Google Chat**: `POST /api/webhooks/google-chat`
+- **WhatsApp**: `GET` / `POST /api/webhooks/whatsapp`
+
+### 1. Telegram Bot Setup
+1. Message `@BotFather` on Telegram to create a new bot and copy the API Token.
+2. Add `TELEGRAM_BOT_TOKEN=your_token` to your `.env.local`.
+3. Set webhook:
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://your-domain.vercel.app/api/webhooks/telegram"
+   ```
+
+### 2. Discord Bot Setup
+1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Set Interactions Endpoint URL to `https://your-domain.vercel.app/api/webhooks/discord`.
+3. Add `DISCORD_BOT_TOKEN=your_token` to `.env.local`.
+
+### 3. Google Chat Setup
+1. Enable Google Chat API in [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a Chat App and set the HTTP Endpoint URL to `https://your-domain.vercel.app/api/webhooks/google-chat`.
+3. Add `GOOGLE_CHAT_WEBHOOK_URL=your_url` to `.env.local`.
+
+### 4. WhatsApp Cloud API Setup
+1. Set up Meta WhatsApp Cloud API in [Meta Developer Console](https://developers.facebook.com/).
+2. Set Webhook Callback URL to `https://your-domain.vercel.app/api/webhooks/whatsapp`.
+3. Set Verify Token to `WHATSAPP_VERIFY_TOKEN=career_intelligence_secret` in `.env.local`.
+4. Add `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` to `.env.local`.
 
 ---
 

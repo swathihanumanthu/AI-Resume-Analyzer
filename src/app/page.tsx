@@ -391,6 +391,42 @@ export default function CareerIntelligencePage() {
         </div>
       </div>
 
+      {/* Connect on Messaging Apps Card */}
+      <div className="console-card" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
+        <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          💬 Connect Career Copilot on Messaging Apps
+        </h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Get instant Career Intelligence, ATS score explanations, and mock interview practice directly in your favorite messaging apps:
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <strong style={{ color: '#38bdf8', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>✈️ Telegram Bot</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/telegram</code></p>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Command: /start or send resume</span>
+          </div>
+
+          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <strong style={{ color: '#818cf8', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>💬 Discord Bot</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/discord</code></p>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Slash Command: /analyze</span>
+          </div>
+
+          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <strong style={{ color: '#34d399', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>🟢 WhatsApp Bot</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/whatsapp</code></p>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Send: "Analyze my resume"</span>
+          </div>
+
+          <div style={{ background: 'var(--surface-elevated)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <strong style={{ color: '#f472b6', fontSize: '0.9rem', display: 'block', marginBottom: '4px' }}>🔷 Google Chat App</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/google-chat</code></p>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Message: "Analyze resume"</span>
+          </div>
+        </div>
+      </div>
+
       {/* Multi-Resume Candidate Comparison Matrix */}
       {multiReport && (
         <div className="console-card">
