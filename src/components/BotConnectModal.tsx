@@ -90,8 +90,29 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
         </p>
 
         <div style={{ background: 'var(--surface-elevated)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '20px' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>API Webhook Endpoint:</div>
-          <code style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', display: 'block', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>API Webhook Endpoint:</span>
+            <button
+              onClick={() => {
+                const fullUrl = `${window.location.origin}${details.webhook}`;
+                navigator.clipboard.writeText(fullUrl);
+                alert(`Copied Webhook URL to clipboard:\n${fullUrl}`);
+              }}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--accent-primary)',
+                color: 'var(--accent-primary)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Copy Webhook URL
+            </button>
+          </div>
+          <code style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', display: 'block', marginBottom: '10px', wordBreak: 'break-all' }}>
             {details.webhook}
           </code>
 
@@ -101,7 +122,7 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" onClick={onClose}>
             Close
           </button>
@@ -110,8 +131,9 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
             target="_blank"
             rel="noreferrer"
             className="btn btn-hero"
-            style={{ textDecoration: 'none' }}
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
+            <ExternalLink style={{ width: 16 }} />
             {details.buttonText}
           </a>
         </div>

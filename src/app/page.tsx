@@ -498,68 +498,92 @@ export default function CareerIntelligencePage() {
             onClick={() => setActiveBotModal('telegram')}
             style={{
               background: 'var(--surface-elevated)',
-              padding: '14px',
-              borderRadius: '10px',
-              border: '1px solid var(--border)',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid #38bdf8',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
+              boxShadow: '0 4px 12px rgba(56, 189, 248, 0.1)',
             }}
             className="console-card-interactive"
           >
-            <strong style={{ color: '#38bdf8', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>✈️ Telegram Bot ↗</strong>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/telegram</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
+            <strong style={{ color: '#38bdf8', fontSize: '1rem', display: 'block', marginBottom: '4px' }}>✈️ Telegram Bot ↗</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Webhook: <code>/api/webhooks/telegram</code></p>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#38bdf8', borderColor: '#38bdf8' }}
+            >
+              🚀 Launch Bot & View Commands →
+            </button>
           </div>
 
           <div
             onClick={() => setActiveBotModal('discord')}
             style={{
               background: 'var(--surface-elevated)',
-              padding: '14px',
-              borderRadius: '10px',
-              border: '1px solid var(--border)',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid #818cf8',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
+              boxShadow: '0 4px 12px rgba(129, 140, 248, 0.1)',
             }}
             className="console-card-interactive"
           >
-            <strong style={{ color: '#818cf8', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>💬 Discord Bot ↗</strong>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/discord</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
+            <strong style={{ color: '#818cf8', fontSize: '1rem', display: 'block', marginBottom: '4px' }}>💬 Discord Bot ↗</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Webhook: <code>/api/webhooks/discord</code></p>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#818cf8', borderColor: '#818cf8' }}
+            >
+              🚀 Launch Bot & View Commands →
+            </button>
           </div>
 
           <div
             onClick={() => setActiveBotModal('whatsapp')}
             style={{
               background: 'var(--surface-elevated)',
-              padding: '14px',
-              borderRadius: '10px',
-              border: '1px solid var(--border)',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid #34d399',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
+              boxShadow: '0 4px 12px rgba(52, 211, 153, 0.1)',
             }}
             className="console-card-interactive"
           >
-            <strong style={{ color: '#34d399', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>🟢 WhatsApp Bot ↗</strong>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/whatsapp</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
+            <strong style={{ color: '#34d399', fontSize: '1rem', display: 'block', marginBottom: '4px' }}>🟢 WhatsApp Bot ↗</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Webhook: <code>/api/webhooks/whatsapp</code></p>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#34d399', borderColor: '#34d399' }}
+            >
+              🚀 Launch Bot & View Commands →
+            </button>
           </div>
 
           <div
             onClick={() => setActiveBotModal('google-chat')}
             style={{
               background: 'var(--surface-elevated)',
-              padding: '14px',
-              borderRadius: '10px',
-              border: '1px solid var(--border)',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid #f472b6',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
+              boxShadow: '0 4px 12px rgba(244, 114, 182, 0.1)',
             }}
             className="console-card-interactive"
           >
-            <strong style={{ color: '#f472b6', fontSize: '0.92rem', display: 'block', marginBottom: '4px' }}>🔷 Google Chat App ↗</strong>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Webhook: <code>/api/webhooks/google-chat</code></p>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Click to launch bot & view commands →</span>
+            <strong style={{ color: '#f472b6', fontSize: '1rem', display: 'block', marginBottom: '4px' }}>🔷 Google Chat App ↗</strong>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Webhook: <code>/api/webhooks/google-chat</code></p>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none', color: '#f472b6', borderColor: '#f472b6' }}
+            >
+              🚀 Launch Bot & View Commands →
+            </button>
           </div>
         </div>
       </div>
