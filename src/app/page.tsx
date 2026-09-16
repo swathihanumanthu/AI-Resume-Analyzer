@@ -88,6 +88,33 @@ export default function CareerIntelligencePage() {
   ]);
   const [copilotInput, setCopilotInput] = useState('');
   const [isCopilotLoading, setIsCopilotLoading] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  const registerMessagingSession = async (
+    jd: string,
+    resumesPayload: any[],
+    singleRes?: FullAnalysisResult,
+    multiRep?: MultiResumeAnalysisReport
+  ) => {
+    try {
+      const res = await fetch('/api/session/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jdText: jd,
+          resumes: resumesPayload,
+          singleAnalysis: singleRes,
+          multiReport: multiRep,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.sessionId) {
+        setActiveSessionId(data.sessionId);
+      }
+    } catch (e) {
+      console.error('Failed to create messaging session:', e);
+    }
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -256,6 +283,11 @@ export default function CareerIntelligencePage() {
 
         if (json.mode === 'single') {
           setSingleAnalysis(json.data);
+          registerMessagingSession(
+            jdText || jdFile?.name || 'Target Job Description',
+            [{ id: 'cand_1', candidateName: json.data.candidateName || 'Candidate 1', fileName: json.data.resumeFilename || 'Resume.pdf', resumeText: '', analysis: json.data }],
+            json.data
+          );
           setProcessingProgress({
             total: 1,
             current: 1,
@@ -267,6 +299,14 @@ export default function CareerIntelligencePage() {
           if (json.data.individualAnalyses.length > 0) {
             setSingleAnalysis(json.data.individualAnalyses[0]);
             setSelectedCandidateId(json.data.individualAnalyses[0].id);
+            const resumesPayload = json.data.individualAnalyses.map((a: FullAnalysisResult, i: number) => ({
+              id: a.id || `cand_${i + 1}`,
+              candidateName: a.candidateName || `Candidate ${i + 1}`,
+              fileName: a.resumeFilename || `Resume_${i + 1}.pdf`,
+              resumeText: '',
+              analysis: a,
+            }));
+            registerMessagingSession(jdText || jdFile?.name || 'Target Job Description', resumesPayload, json.data.individualAnalyses[0], json.data);
           }
           setProcessingProgress({
             total: json.data.totalResumesAnalyzed,
@@ -292,6 +332,14 @@ export default function CareerIntelligencePage() {
           if (json.data.individualAnalyses.length > 0) {
             setSingleAnalysis(json.data.individualAnalyses[0]);
             setSelectedCandidateId(json.data.individualAnalyses[0].id);
+            const resumesPayload = json.data.individualAnalyses.map((a: FullAnalysisResult, i: number) => ({
+              id: a.id || `cand_${i + 1}`,
+              candidateName: a.candidateName || `Candidate ${i + 1}`,
+              fileName: a.resumeFilename || `Resume_${i + 1}.pdf`,
+              resumeText: '',
+              analysis: a,
+            }));
+            registerMessagingSession('Sample Senior Fullstack Engineer JD', resumesPayload, json.data.individualAnalyses[0], json.data);
           }
           setActiveJourneyStep('understand');
           return;
@@ -312,6 +360,11 @@ export default function CareerIntelligencePage() {
         if (!json.success) throw new Error(json.error || 'Analysis failed');
 
         setSingleAnalysis(json.data);
+        registerMessagingSession(
+          jdText,
+          [{ id: 'cand_1', candidateName: json.data.candidateName || 'Candidate 1', fileName: 'Pasted_Resume.txt', resumeText: pastedResumeText, analysis: json.data }],
+          json.data
+        );
       }
       setActiveJourneyStep('understand');
     } catch (err: unknown) {
@@ -972,6 +1025,103 @@ export default function CareerIntelligencePage() {
       {/* Main Analysis Dashboard Console */}
       {singleAnalysis && (
         <div>
+          {/* CONNECT CAREER COPILOT TO MESSAGING APPS */}
+          <div className="console-card" style={{ marginBottom: '24px', border: '1px solid var(--accent-primary)', background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: 'var(--text-primary)' }}>
+                  📱 Connect Career Copilot to Real Messaging Apps
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                  Access your live Job Readiness Score, missing skills, and mock interview practice directly on your mobile phone or desktop messaging app.
+                </p>
+              </div>
+              {activeSessionId && (
+                <div style={{ fontSize: '0.8rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '4px 12px', borderRadius: '20px', fontWeight: 700, border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                  ✓ Session Linked: {activeSessionId}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+              {/* Telegram Card */}
+              <div style={{ background: 'var(--surface-elevated)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#38bdf8', marginBottom: '6px' }}>
+                    <span>✈️ Telegram Bot</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.4 }}>
+                    Open Telegram with your active Career Intelligence session attached.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%', borderColor: '#38bdf8', color: '#38bdf8', fontSize: '0.82rem', fontWeight: 700 }}
+                  onClick={() => setActiveBotModal('telegram')}
+                >
+                  🚀 Open Telegram & Start
+                </button>
+              </div>
+
+              {/* WhatsApp Card */}
+              <div style={{ background: 'var(--surface-elevated)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#34d399', marginBottom: '6px' }}>
+                    <span>🟢 WhatsApp Cloud Bot</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.4 }}>
+                    Start an instant WhatsApp chat with pre-filled session payload.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%', borderColor: '#34d399', color: '#34d399', fontSize: '0.82rem', fontWeight: 700 }}
+                  onClick={() => setActiveBotModal('whatsapp')}
+                >
+                  🚀 Open WhatsApp & Start
+                </button>
+              </div>
+
+              {/* Discord Card */}
+              <div style={{ background: 'var(--surface-elevated)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#818cf8', marginBottom: '6px' }}>
+                    <span>💬 Discord Bot App</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.4 }}>
+                    Connect Career Copilot to your Discord server or direct messages.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%', borderColor: '#818cf8', color: '#818cf8', fontSize: '0.82rem', fontWeight: 700 }}
+                  onClick={() => setActiveBotModal('discord')}
+                >
+                  🚀 Open Discord & Start
+                </button>
+              </div>
+
+              {/* Google Chat Card */}
+              <div style={{ background: 'var(--surface-elevated)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#f472b6', marginBottom: '6px' }}>
+                    <span>🔷 Google Chat App</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.4 }}>
+                    Access Career Copilot directly in your Google Workspace spaces.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%', borderColor: '#f472b6', color: '#f472b6', fontSize: '0.82rem', fontWeight: 700 }}
+                  onClick={() => setActiveBotModal('google-chat')}
+                >
+                  🚀 Open Google Chat & Start
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Journey Navigation Tabs */}
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '24px' }}>
             <button
@@ -1477,6 +1627,7 @@ export default function CareerIntelligencePage() {
       {/* Messaging Bot Connect Modal */}
       <BotConnectModal
         platform={activeBotModal}
+        sessionId={activeSessionId}
         onClose={() => setActiveBotModal(null)}
       />
     </div>

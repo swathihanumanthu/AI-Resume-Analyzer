@@ -1,19 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, MessageSquare, Smartphone, Play, CheckCircle, Copy, Sparkles } from 'lucide-react';
+import { X, Smartphone, Copy, Sparkles, CheckCircle2, ShieldCheck, Link2 } from 'lucide-react';
 
 export type BotPlatform = 'telegram' | 'discord' | 'whatsapp' | 'google-chat';
 
 interface BotConnectModalProps {
   platform: BotPlatform | null;
+  sessionId?: string | null;
   onClose: () => void;
 }
 
-export default function BotConnectModal({ platform, onClose }: BotConnectModalProps) {
+export default function BotConnectModal({ platform, sessionId, onClose }: BotConnectModalProps) {
   const [testOutput, setTestOutput] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const telegramBotUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'CareerCopilotBot';
+  const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER || '15551234567';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ai-resume-analyzer-sand-beta.vercel.app';
+
+  const startParam = sessionId ? sessionId : 'START';
 
   const details = platform
     ? {
@@ -21,41 +28,41 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
           title: '✈️ Telegram Bot Connection',
           color: '#38bdf8',
           webhook: '/api/webhooks/telegram',
-          appScheme: 'tg://msg?text=/start',
-          launchUrl: 'https://t.me/CareerCopilotBot?start=analyze',
-          command: '/start',
-          instruction: 'Open Telegram app directly or view the live bot output below.',
-          buttonText: '🚀 Open Telegram App',
+          appScheme: `tg://resolve?domain=${telegramBotUsername}&start=${startParam}`,
+          launchUrl: `https://t.me/${telegramBotUsername}?start=${startParam}`,
+          command: sessionId ? `/start ${sessionId}` : '/start',
+          instruction: 'Tap below to open Telegram app directly with your active Career Intelligence session attached.',
+          buttonText: '🚀 Open Telegram & Start',
         },
         discord: {
           title: '💬 Discord Bot Connection',
           color: '#818cf8',
           webhook: '/api/webhooks/discord',
           appScheme: 'discord://',
-          launchUrl: 'https://discord.com/app',
-          command: '/analyze',
-          instruction: 'Open Discord app directly or view the live bot output below.',
-          buttonText: '🚀 Open Discord App',
+          launchUrl: process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || 'https://discord.com/app',
+          command: sessionId ? `/start ${sessionId}` : '/start',
+          instruction: 'Join the Career Copilot Discord Bot server to receive automated alerts and analysis summaries.',
+          buttonText: '🚀 Open Discord & Start',
         },
         whatsapp: {
           title: '🟢 WhatsApp Bot Connection',
           color: '#34d399',
           webhook: '/api/webhooks/whatsapp',
-          appScheme: 'whatsapp://send?text=Analyze%20my%20resume',
-          launchUrl: 'https://api.whatsapp.com/send?text=Analyze%20my%20resume',
-          command: 'Analyze my resume',
-          instruction: 'Open WhatsApp app directly or view the live bot output below.',
-          buttonText: '🚀 Open WhatsApp App',
+          appScheme: `whatsapp://send?phone=${whatsappPhone}&text=START%20${startParam}`,
+          launchUrl: `https://wa.me/${whatsappPhone}?text=START%20${startParam}`,
+          command: sessionId ? `START ${sessionId}` : 'START',
+          instruction: 'Open WhatsApp directly to start your Career Copilot conversation with pre-filled session payload.',
+          buttonText: '🚀 Open WhatsApp & Start',
         },
         'google-chat': {
           title: '🔷 Google Chat App Connection',
           color: '#f472b6',
           webhook: '/api/webhooks/google-chat',
           appScheme: 'googlechat://',
-          launchUrl: 'https://chat.google.com/',
-          command: 'Analyze resume',
-          instruction: 'Open Google Chat app directly or view the live bot output below.',
-          buttonText: '🚀 Open Google Chat App',
+          launchUrl: process.env.NEXT_PUBLIC_GOOGLE_CHAT_SPACE_URL || 'https://chat.google.com/',
+          command: sessionId ? `/start ${sessionId}` : 'START',
+          instruction: 'Open Google Chat to interact with Career Copilot inside your team workspace space.',
+          buttonText: '🚀 Open Google Chat & Start',
         },
       }[platform]
     : null;
@@ -71,7 +78,7 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
       body: JSON.stringify({
         message: {
           text: details.command,
-          from: { id: 'user_session_mobile', first_name: 'Candidate' },
+          from: { id: 'web_session_user', first_name: 'Candidate' },
         },
       }),
     })
@@ -79,11 +86,11 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
       .then((json) => {
         if (isMounted) {
           if (json.text) setTestOutput(json.text);
-          else setTestOutput('Bot output generated successfully.');
+          else setTestOutput('Bot response output generated successfully.');
         }
       })
       .catch(() => {
-        if (isMounted) setTestOutput('Error fetching bot output.');
+        if (isMounted) setTestOutput('Error fetching bot response.');
       })
       .finally(() => {
         if (isMounted) setIsTesting(false);
@@ -92,17 +99,17 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
     return () => {
       isMounted = false;
     };
-  }, [platform]);
+  }, [platform, sessionId]);
 
   if (!platform || !details) return null;
 
-  const handleLaunchMobileApp = () => {
+  const handleLaunchApp = () => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (isMobile) {
       window.location.href = details.appScheme;
       setTimeout(() => {
         window.open(details.launchUrl, '_blank');
-      }, 1000);
+      }, 1200);
     } else {
       window.open(details.launchUrl, '_blank');
     }
@@ -120,19 +127,19 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.75)',
+        background: 'rgba(0,0,0,0.8)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1100,
-        backdropFilter: 'blur(6px)',
+        backdropFilter: 'blur(8px)',
       }}
       onClick={onClose}
     >
       <div
         className="console-card"
         style={{
-          maxWidth: '540px',
+          maxWidth: '560px',
           width: '92%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -141,8 +148,8 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: details.color, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: details.color, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
             {details.title}
           </h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -150,15 +157,27 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
           </button>
         </div>
 
+        {sessionId ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '8px 12px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+            <Link2 style={{ width: 16, color: '#38bdf8' }} />
+            <span>Active Session Linked: <code style={{ color: '#38bdf8', fontWeight: 700 }}>{sessionId}</code></span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '8px 12px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+            <ShieldCheck style={{ width: 16, color: '#eab308' }} />
+            <span>No session linked yet — Launch will start standard bot setup flow.</span>
+          </div>
+        )}
+
         <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
           {details.instruction}
         </p>
 
-        {/* Live Bot Output Window */}
+        {/* Live Bot Response Window */}
         <div style={{ marginBottom: '16px', background: 'var(--surface-elevated)', borderRadius: '8px', border: '1px solid var(--border)', padding: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Sparkles style={{ width: 14 }} /> Bot Response Output:
+              <Sparkles style={{ width: 14 }} /> Real Bot Response Payload:
             </span>
             {testOutput && (
               <button
@@ -166,14 +185,14 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
                 className="btn btn-secondary"
                 style={{ padding: '3px 8px', fontSize: '0.75rem', fontWeight: 700 }}
               >
-                {copied ? '✓ Copied Output!' : '📋 Copy Output'}
+                {copied ? '✓ Copied!' : '📋 Copy Text'}
               </button>
             )}
           </div>
 
           {isTesting ? (
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px 0' }}>
-              ⏳ Generating bot analysis output...
+              ⏳ Communicating with Career Copilot service...
             </div>
           ) : (
             <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', maxHeight: '220px', overflowY: 'auto', background: 'var(--bg-primary)', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', fontFamily: 'monospace' }}>
@@ -192,7 +211,7 @@ export default function BotConnectModal({ platform, onClose }: BotConnectModalPr
             Close
           </button>
           <button
-            onClick={handleLaunchMobileApp}
+            onClick={handleLaunchApp}
             className="btn btn-hero"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
           >
